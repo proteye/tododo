@@ -1,6 +1,6 @@
-# tododo
+# The 2dodo project on Flutter
 
-A new Flutter project.
+Secure chat with RSA-2048 and AES-256 encryption.
 
 ## Getting Started
 
