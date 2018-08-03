@@ -1,17 +1,16 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:tododo/src/models/account.model.dart';
-import 'package:tododo/src/utils/websocket.util.dart';
 import 'package:tododo/src/utils/formatter.util.dart';
+import 'package:tododo/src/utils/websocket.util.dart';
+
+Websocket websocket = new Websocket();
 
 class LoginScreen extends StatefulWidget {
-  final Websocket websocket;
-
-  LoginScreen({Key key, @required this.websocket}) : super(key: key);
-
   @override
   createState() => LoginFormState();
 }
@@ -21,6 +20,7 @@ class LoginFormState extends State<LoginScreen> {
   final _formKey = new GlobalKey<FormState>();
 
   bool _autovalidate = false;
+  bool _disabled = false;
 
   String login = '';
   String password = '';
@@ -41,28 +41,56 @@ class LoginFormState extends State<LoginScreen> {
     AccountModel account = AccountModel.fromJson(accountJson);
     // print('account: ${account}');
 
-    if (login != account.nickname || password != account.password) {
+    if (login != account.nickname) {
       showInSnackBar('Failure! Wrong login or password',
           duration: Duration(seconds: 5), error: true);
+      setState(() {
+        _disabled = false;
+      });
       return;
     }
 
-    showInSnackBar('Successfully! Wellcome to app',
-        duration: Duration(seconds: 3));
-
-    widget.websocket.connect(
+    websocket.connect(
         username: account.username,
-        password: account.password,
+        password: password,
         deviceId: account.deviceId,
         hashKey: account.hashKey);
+
+    var timeOut = const Duration(seconds: 3);
+    new Timer(timeOut, () {
+      if (websocket.channel.closeCode != null) {
+        showInSnackBar('Failure! Wrong login or password',
+            duration: Duration(seconds: 5), error: true);
+        setState(() {
+          _disabled = false;
+        });
+        return;
+      }
+
+      timeOut = const Duration(seconds: 2);
+      showInSnackBar('Successfully! Wellcome to app',
+          duration: Duration(seconds: 2));
+      new Timer(timeOut, () {
+        Navigator.pushNamedAndRemoveUntil(context, '/main', (route) => false);
+        setState(() {
+          _disabled = false;
+        });
+      });
+    });
   }
 
   void onLogin() async {
     _formKey.currentState.save();
     if (_formKey.currentState.validate()) {
-      print('login: $login, password: $password, createNewKey: $createNewKey');
+      const timeOut = const Duration(seconds: 1);
+      setState(() {
+        _disabled = true;
+      });
       showInSnackBar('Signing in...');
-      signin();
+      new Timer(timeOut, () {
+        // print('login: $login, password: $password, createNewKey: $createNewKey');
+        signin();
+      });
     } else {
       setState(() {
         _autovalidate = true;
@@ -192,11 +220,14 @@ class LoginFormState extends State<LoginScreen> {
                           textColor: Colors.white,
                           shape: new RoundedRectangleBorder(
                               borderRadius: new BorderRadius.circular(30.0),
-                              side:
-                                  BorderSide(width: 2.0, color: Colors.white)),
+                              side: BorderSide(
+                                  width: 2.0,
+                                  color: !_disabled
+                                      ? Colors.white
+                                      : Colors.black26)),
                           padding: EdgeInsets.symmetric(
                               vertical: 10.0, horizontal: 70.0),
-                          onPressed: onLogin,
+                          onPressed: !_disabled ? onLogin : null,
                           child: Text('Enter'),
                         ),
                         SizedBox(height: 5.0),
@@ -248,11 +279,5 @@ class LoginFormState extends State<LoginScreen> {
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    widget.websocket.close();
-    super.dispose();
   }
 }

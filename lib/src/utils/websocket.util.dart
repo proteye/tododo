@@ -7,41 +7,62 @@ import '../config.dart';
 class Websocket {
   WebSocketChannel channel;
 
+  static final Websocket _websocket = new Websocket._internal();
+
+  factory Websocket() {
+    return _websocket;
+  }
+
+  Websocket._internal();
+
   WebSocketChannel connect(
       {String deviceId,
       String username,
       String password,
       String hashKey,
       String url}) {
+    if (url == null || url.isEmpty) {
+      url = Config.WS_HOST;
+    }
+
     Map<String, String> _headers = _getHeaders(
         deviceId: deviceId,
         username: username,
         password: password,
         hashKey: hashKey);
 
-    if (url == null || url.isEmpty) {
-      url = Config.WS_HOST;
-    }
-
     channel = IOWebSocketChannel.connect(url, headers: _headers);
 
-    channel.stream.listen((message) {
-      print('Websocket received: ${message.toString()}');
-    });
+    channel.stream.listen(onData, onError: onError, onDone: onDone);
 
     return channel;
   }
 
-  void sendMessage(text) {
-    if (channel != null && text.isNotEmpty) {
+  void sendMessage(String text) {
+    if (channel != null && channel.closeCode == null && text.isNotEmpty) {
+      print('Websocket send: $text');
       channel.sink.add(text);
     }
   }
 
   void close() {
-    if (channel != null) {
+    if (channel != null && channel.closeCode == null) {
       channel.sink.close();
     }
+  }
+
+  void onData(data) {
+    print('Websocket received: ${data.toString()}');
+  }
+
+  void onError(error) {
+    print('Websocket error: ${error.toString()}');
+  }
+
+  void onDone() {
+    print('Websocket done');
+    print('Close code: ${channel.closeCode}');
+    print('Close reason: ${channel.closeReason}');
   }
 
   Map<String, String> _getHeaders(

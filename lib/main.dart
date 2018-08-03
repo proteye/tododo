@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:tododo/src/routing.dart';
-import 'package:tododo/src/utils/websocket.util.dart';
-
-Websocket websocket = new Websocket();
 
 void main() {
   runApp(MaterialApp(
@@ -12,8 +9,9 @@ void main() {
     theme: ThemeData(
       brightness: Brightness.light,
       fontFamily: 'Exo2',
+      scaffoldBackgroundColor: Colors.white,
     ),
     initialRoute: '/',
-    routes: Routing.routes(websocket),
+    routes: Routing.routes(),
   ));
 }

@@ -223,7 +223,7 @@ class RegisterEmailFormState extends State<RegisterEmailScreen> {
     var device = await DeviceHelper.getDeviceDetails(widget.form.platform);
     widget.form.deviceId = device['deviceId'];
     widget.form.deviceName = device['deviceName'];
-    // print(device);
+    print(device);
 
     var registerParams = widget.form.toMap();
     var result = await AuthService.register(null, params: registerParams);
