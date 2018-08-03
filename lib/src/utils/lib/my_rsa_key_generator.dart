@@ -1,7 +1,5 @@
 // Fixed RSAKeyGenerator version of the Pointy Castle project
 
-library tododo.src.utils.my_rsa_key_generator;
-
 import "package:pointycastle/api.dart";
 import "package:pointycastle/asymmetric/api.dart";
 import "package:pointycastle/key_generators/api.dart";
@@ -82,7 +80,7 @@ class MyRSAKeyGenerator implements KeyGenerator {
           continue;
         }
 
-        if (q.modInverse(e) == BigInt.one) {
+        if (q % e == BigInt.one) {
           continue;
         }
 
