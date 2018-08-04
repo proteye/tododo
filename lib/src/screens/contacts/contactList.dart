@@ -4,8 +4,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:tododo/src/utils/enum.util.dart';
 import 'package:tododo/src/utils/formatter.util.dart';
 import 'package:tododo/src/utils/helper.util.dart';
+import 'package:tododo/src/utils/db.util.dart';
+
+Db db = new Db();
 
 class ContactListScreen extends StatefulWidget {
   @override
@@ -14,9 +18,19 @@ class ContactListScreen extends StatefulWidget {
 
 class ContactListState extends State<ContactListScreen> {
   final searchController = TextEditingController();
-  List<Map<String, String>> contacts = [];
-  List<Map<String, String>> filteredContacts = [];
+  List<Map<String, dynamic>> contacts = [];
+  List<Map<String, dynamic>> filteredContacts = [];
   String searchText = '';
+
+  void init() async {
+    searchController.addListener(onSearchChange);
+    var _contacts = await db.getByKey(Enum.DB['contacts']) ?? [];
+
+    setState(() {
+      contacts = List<Map<String, dynamic>>.from(_contacts);
+      filteredContacts = contacts;
+    });
+  }
 
   void search(String text) async {
     if (text.isEmpty) {
@@ -44,36 +58,23 @@ class ContactListState extends State<ContactListScreen> {
   }
 
   void onContactAdd() async {
-    var username = await Navigator.pushNamed(context, '/contactAdd');
-    try {
-      if (username != null) {
-        setState(() {
-          Map<String, String> contact = {
-            'username': username as String,
-            'nickname': Helper.getNickname(username),
-          };
-          var isAdded = contacts.firstWhere((item) {
-            return item['username'] == contact['username'];
-          }, orElse: () {});
-          if (isAdded == null) {
-            contacts.add(contact);
-            filteredContacts = contacts;
-          }
-        });
-      }
-    } catch (e) {
-      print('onContactAdd error: ${e.toString()}');
+    var result = await Navigator.pushNamed(context, '/contactAdd');
+
+    if (result != null) {
+      var _contacts = await db.getByKey(Enum.DB['contacts']) ?? [];
+      setState(() {
+        contacts = List<Map<String, dynamic>>.from(_contacts);
+        filteredContacts = contacts;
+      });
     }
   }
 
-  void onContactTap(username) {
-    // Navigator.pop(context, username);
-  }
+  void onContactTap(username) {}
 
   @override
   void initState() {
     super.initState();
-    searchController.addListener(onSearchChange);
+    init();
   }
 
   @override
@@ -147,7 +148,7 @@ class ContactListState extends State<ContactListScreen> {
                                 style: TextStyle(
                                     fontWeight: FontWeight.w700,
                                     fontSize: 16.0)),
-                            subtitle: Text(contact['nickname'],
+                            subtitle: Text('@${contact['nickname']}',
                                 style: TextStyle(
                                     fontWeight: FontWeight.w400,
                                     fontSize: 14.0)),

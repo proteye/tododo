@@ -3,11 +3,15 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:tododo/src/models/contact.model.dart';
+import 'package:tododo/src/utils/enum.util.dart';
 import 'package:tododo/src/utils/formatter.util.dart';
 import 'package:tododo/src/utils/helper.util.dart';
 import 'package:tododo/src/utils/websocket.util.dart';
+import 'package:tododo/src/utils/db.util.dart';
 
 Websocket websocket = new Websocket();
+Db db = new Db();
 
 class ContactAddScreen extends StatefulWidget {
   @override
@@ -18,8 +22,19 @@ class ContactAddState extends State<ContactAddScreen> {
   final searchController = TextEditingController();
   StreamSubscription<dynamic> websocketSubscription;
   List<String> contacts = [];
+  List<Map<String, dynamic>> dbContacts = [];
   String searchText = '';
   DateTime encryptTime;
+
+  void init() async {
+    websocketSubscription = websocket.bstream.listen(onSearchResult);
+    searchController.addListener(onSearchChange);
+    var _dbContacts = await db.getByKey(Enum.DB['contacts']) ?? [];
+
+    setState(() {
+      dbContacts = List<Map<String, dynamic>>.from(_dbContacts);
+    });
+  }
 
   void search(String text) async {
     encryptTime = new DateTime.now();
@@ -37,6 +52,26 @@ class ContactAddState extends State<ContactAddScreen> {
     });
 
     websocket.send(data);
+  }
+
+  Future addContact(username) async {
+    var contacts = await db.getByKey(Enum.DB['contacts']) ?? [];
+
+    var isAdded = contacts.firstWhere((item) {
+      return item['username'] == username;
+    }, orElse: () {});
+
+    if (isAdded == null) {
+      ContactModel contact = new ContactModel(
+          username: username, nickname: Helper.getNickname(username));
+      contacts.add(contact.toJson());
+      contacts.sort(Helper.sortByUsername);
+      await db.setByKey(Enum.DB['contacts'], contacts);
+
+      return username;
+    }
+
+    return null;
   }
 
   void onSearchResult(data) {
@@ -75,15 +110,15 @@ class ContactAddState extends State<ContactAddScreen> {
     searchController.clear();
   }
 
-  void onContactTap(username) {
-    Navigator.pop(context, username);
+  void onContactTap(username) async {
+    var result = await addContact(username);
+    Navigator.pop(context, result);
   }
 
   @override
   void initState() {
     super.initState();
-    websocketSubscription = websocket.bstream.listen(onSearchResult);
-    searchController.addListener(onSearchChange);
+    init();
   }
 
   @override
@@ -140,7 +175,15 @@ class ContactAddState extends State<ContactAddScreen> {
                         itemCount: contacts.length,
                         itemBuilder: (context, index) {
                           String username = contacts[index];
-                          String nickname = Helper.getNickname(username);
+                          String nickname = Helper.getAtNickname(username);
+                          String inContacts = '';
+
+                          var inDbContacts = dbContacts.firstWhere((item) {
+                            return item['username'] == username;
+                          }, orElse: () {});
+                          if (inDbContacts != null) {
+                            inContacts = 'in contacts';
+                          }
 
                           return ListTile(
                             onTap: () {
@@ -155,7 +198,7 @@ class ContactAddState extends State<ContactAddScreen> {
                                 style: TextStyle(
                                     fontWeight: FontWeight.w700,
                                     fontSize: 16.0)),
-                            subtitle: Text(nickname,
+                            subtitle: Text('$nickname $inContacts',
                                 style: TextStyle(
                                     fontWeight: FontWeight.w400,
                                     fontSize: 14.0)),

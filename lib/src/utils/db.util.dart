@@ -34,11 +34,11 @@ class Db {
     }
   }
 
-  Future<dynamic> get(String key) {
+  Future<dynamic> getByKey(String key) {
     return db.get(key);
   }
 
-  Future<dynamic> put(String key, dynamic value) {
+  Future<dynamic> setByKey(String key, dynamic value) {
     return db.put(value, key);
   }
 
