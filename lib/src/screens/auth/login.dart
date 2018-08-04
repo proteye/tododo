@@ -7,8 +7,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tododo/src/models/account.model.dart';
 import 'package:tododo/src/utils/formatter.util.dart';
 import 'package:tododo/src/utils/websocket.util.dart';
+import 'package:tododo/src/utils/db.util.dart';
 
 Websocket websocket = new Websocket();
+Db db = new Db();
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -35,6 +37,20 @@ class LoginFormState extends State<LoginScreen> {
     ));
   }
 
+  void init() async {
+    final prefs = await SharedPreferences.getInstance();
+    bool authorized = prefs.getBool('authorized') ?? false;
+    if (authorized) {
+      var accountJson = json.decode(prefs.getString('account'));
+      setState(() {
+        _disabled = true;
+        login = accountJson['nickname'];
+        password = accountJson['password'];
+      });
+      signin();
+    }
+  }
+
   void signin() async {
     final prefs = await SharedPreferences.getInstance();
     var accountJson = json.decode(prefs.getString('account'));
@@ -59,7 +75,7 @@ class LoginFormState extends State<LoginScreen> {
         hashKey: account.hashKey);
 
     var timeOut = const Duration(seconds: 3);
-    new Timer(timeOut, () {
+    new Timer(timeOut, () async {
       // login failed
       if (websocket.channel.closeCode != null) {
         showInSnackBar('Failure! Wrong login or password',
@@ -71,6 +87,14 @@ class LoginFormState extends State<LoginScreen> {
       }
 
       // login success
+      var dbResult = await db.open(dbName: account.nickname);
+      if (dbResult == null) {
+        showInSnackBar('Failure! Database connection error',
+            duration: Duration(seconds: 3), error: true);
+        return;
+      }
+
+      prefs.setBool('authorized', true);
       Navigator.pushNamedAndRemoveUntil(context, '/main', (route) => false);
       setState(() {
         _disabled = false;
@@ -102,6 +126,12 @@ class LoginFormState extends State<LoginScreen> {
   }
 
   void onForgot() {}
+
+  @override
+  void initState() {
+    super.initState();
+    init();
+  }
 
   @override
   Widget build(BuildContext context) {

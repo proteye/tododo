@@ -52,15 +52,13 @@ class ContactListState extends State<ContactListScreen> {
             'username': username as String,
             'nickname': Helper.getNickname(username),
           };
-          try {
-            var isAdded = contacts.singleWhere((item) {
-              return item['username'] == contact['username'];
-            }, orElse: () {});
-            if (isAdded == null) {
-              contacts.add(contact);
-              filteredContacts = contacts;
-            }
-          } catch (e) {}
+          var isAdded = contacts.firstWhere((item) {
+            return item['username'] == contact['username'];
+          }, orElse: () {});
+          if (isAdded == null) {
+            contacts.add(contact);
+            filteredContacts = contacts;
+          }
         });
       }
     } catch (e) {
