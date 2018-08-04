@@ -15,6 +15,12 @@ class SettingListState extends State<SettingListScreen> {
   }
 
   @override
+  void dispose() {
+    websocket.close();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomPadding: true,
@@ -33,11 +39,5 @@ class SettingListState extends State<SettingListScreen> {
       ),
       body: Center(child: Icon(Icons.settings)),
     );
-  }
-
-  @override
-  void dispose() {
-    websocket.close();
-    super.dispose();
   }
 }

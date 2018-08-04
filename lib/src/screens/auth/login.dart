@@ -43,12 +43,14 @@ class LoginFormState extends State<LoginScreen> {
 
     if (login != account.nickname) {
       showInSnackBar('Failure! Wrong login or password',
-          duration: Duration(seconds: 5), error: true);
+          duration: Duration(seconds: 3), error: true);
       setState(() {
         _disabled = false;
       });
       return;
     }
+
+    showInSnackBar('Signing in...', duration: Duration(seconds: 3));
 
     websocket.connect(
         username: account.username,
@@ -58,23 +60,20 @@ class LoginFormState extends State<LoginScreen> {
 
     var timeOut = const Duration(seconds: 3);
     new Timer(timeOut, () {
+      // login failed
       if (websocket.channel.closeCode != null) {
         showInSnackBar('Failure! Wrong login or password',
-            duration: Duration(seconds: 5), error: true);
+            duration: Duration(seconds: 3), error: true);
         setState(() {
           _disabled = false;
         });
         return;
       }
 
-      timeOut = const Duration(seconds: 2);
-      showInSnackBar('Successfully! Wellcome to app',
-          duration: Duration(seconds: 2));
-      new Timer(timeOut, () {
-        Navigator.pushNamedAndRemoveUntil(context, '/main', (route) => false);
-        setState(() {
-          _disabled = false;
-        });
+      // login success
+      Navigator.pushNamedAndRemoveUntil(context, '/main', (route) => false);
+      setState(() {
+        _disabled = false;
       });
     });
   }
@@ -86,7 +85,6 @@ class LoginFormState extends State<LoginScreen> {
       setState(() {
         _disabled = true;
       });
-      showInSnackBar('Signing in...');
       new Timer(timeOut, () {
         // print('login: $login, password: $password, createNewKey: $createNewKey');
         signin();
