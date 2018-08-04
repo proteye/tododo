@@ -36,6 +36,10 @@ class ContactListState extends State<ContactListScreen> {
     if (text.isEmpty) {
       return;
     }
+
+    setState(() {
+      filteredContacts = contacts.where((item) => item['username'].indexOf(text) >= 0).toList();
+    });
   }
 
   void onSearchChange() {
