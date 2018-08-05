@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:sembast/sembast.dart';
 import 'package:sembast/sembast_io.dart';
+import 'package:uuid/uuid.dart';
 
 import 'package:tododo/src/utils/file.util.dart';
 import 'package:tododo/src/config.dart';
@@ -16,6 +17,17 @@ class Db {
   }
 
   Db._internal();
+
+  static String generateSalt() {
+    var uuid = new Uuid();
+    var id = uuid.v4();
+
+    return id.replaceAll(new RegExp(r'-'), '');
+  }
+
+  static String generateId() {
+    return generateSalt();
+  }
 
   Future<dynamic> open({String dbName}) async {
     try {

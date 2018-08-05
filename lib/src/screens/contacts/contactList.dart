@@ -1,12 +1,8 @@
-import 'dart:core';
-import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:tododo/src/utils/enum.util.dart';
 import 'package:tododo/src/utils/formatter.util.dart';
-import 'package:tododo/src/utils/helper.util.dart';
 import 'package:tododo/src/utils/db.util.dart';
 
 Db db = new Db();
@@ -75,7 +71,9 @@ class ContactListState extends State<ContactListScreen> {
     }
   }
 
-  void onContactTap(username) {}
+  void onContactTap(contact) {
+    print(contact);
+  }
 
   @override
   void initState() {

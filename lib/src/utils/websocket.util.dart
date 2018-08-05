@@ -52,8 +52,29 @@ class Websocket {
     }
   }
 
+  void sendDeliveryReport(data) {
+    var jsonData = json.decode(data);
+    var _encryptTime = jsonData['encrypt_time'] ?? null;
+    var _action = jsonData['action'] ?? null;
+
+    if (_encryptTime == null || _action == null || _action == 'delivery_report') {
+      return;
+    }
+
+    var reportData = json.encode({
+      'type': 'server_message',
+      'action': 'delivery_report',
+      'data': {'encrypt_time': _encryptTime},
+      'to': null,
+      // 'encrypt_time': DateTime.now().toUtc().toIso8601String(),
+    });
+
+    send(reportData);
+  }
+
   void onData(data) {
     print('Websocket received: ${data.toString()}');
+    sendDeliveryReport(data);
   }
 
   void onError(error) {

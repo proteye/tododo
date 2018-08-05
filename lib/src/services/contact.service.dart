@@ -68,7 +68,7 @@ class ContactService {
       var data = json.encode({
         'type': 'client_message',
         'action': 'send_profile',
-        'data': encrypted,
+        'data': {'meta': meta, 'files': {}, 'payload': encrypted},
         'to': [username],
         'encrypt_time': _encryptTime,
       });

@@ -1,22 +1,22 @@
 import 'dart:convert';
 
 class ContactModel {
-  String username = '';
-  String nickname = '';
-  String deviceId = '';
-  List<String> groups = [];
-  List<String> phones = [];
-  String firstName = '';
-  String secondName = '';
-  String bio = '';
-  String avatar = '';
-  String sound = '';
-  bool notification = true;
-  bool isBlocked = false;
-  String settings = '';
-  String publicKey = '';
-  DateTime dateCreate = DateTime.now();
-  DateTime dateUpdate = DateTime.now();
+  String username;
+  String nickname;
+  String deviceId;
+  List<String> groups;
+  List<String> phones;
+  String firstName;
+  String secondName;
+  String bio;
+  String avatar;
+  String sound;
+  bool notification;
+  bool isBlocked;
+  String settings;
+  String publicKey;
+  DateTime dateCreate;
+  DateTime dateUpdate;
 
   ContactModel(
       {String username,
@@ -77,20 +77,20 @@ class ContactModel {
     );
   }
 
-  Map<String, String> toJson() {
+  Map<String, dynamic> toJson() {
     return {
       'username': username,
       'nickname': nickname,
       'deviceId': deviceId,
-      'groups': json.encode(groups),
-      'phones': json.encode(phones),
+      'groups': groups,
+      'phones': phones,
       'firstName': firstName,
       'secondName': secondName,
       'bio': bio,
       'avatar': avatar,
       'sound': sound,
-      'notification': notification.toString(),
-      'isBlocked': isBlocked.toString(),
+      'notification': notification,
+      'isBlocked': isBlocked,
       'settings': settings,
       'publicKey': publicKey,
       'dateCreate':

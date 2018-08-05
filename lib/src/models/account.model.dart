@@ -1,19 +1,19 @@
 import 'dart:convert';
 
 class AccountModel {
-  String username = '';
-  String nickname = '';
-  String password = '';
-  String email = '';
-  String phone = '';
-  String publicKey = '';
-  String privateKey = '';
-  String hashKey = '';
-  String deviceId = '';
-  String deviceName = '';
-  String platform = '';
-  String settings = '';
-  String hostname = '';
+  String username;
+  String nickname;
+  String password;
+  String email;
+  String phone;
+  String publicKey;
+  String privateKey;
+  String hashKey;
+  String deviceId;
+  String deviceName;
+  String platform;
+  String settings;
+  String hostname;
 
   AccountModel(
       {this.username,
@@ -47,7 +47,7 @@ class AccountModel {
         hostname: json['hostname'] as String);
   }
 
-  Map<String, String> toMap() {
+  Map<String, dynamic> toJson() {
     return {
       'username': username,
       'nickname': nickname,
@@ -67,6 +67,6 @@ class AccountModel {
 
   @override
   String toString() {
-    return json.encode(this.toMap());
+    return json.encode(this);
   }
 }
