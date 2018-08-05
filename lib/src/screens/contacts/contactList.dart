@@ -38,7 +38,9 @@ class ContactListState extends State<ContactListScreen> {
     }
 
     setState(() {
-      filteredContacts = contacts.where((item) => item['username'].indexOf(text) >= 0).toList();
+      filteredContacts = contacts
+          .where((item) => item['username'].indexOf(text) >= 0)
+          .toList();
     });
   }
 

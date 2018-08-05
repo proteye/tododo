@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:tododo/src/models/contact.model.dart';
+import 'package:tododo/src/services/contact.service.dart';
 import 'package:tododo/src/utils/enum.util.dart';
 import 'package:tododo/src/utils/formatter.util.dart';
 import 'package:tododo/src/utils/helper.util.dart';
@@ -26,8 +27,10 @@ class ContactAddState extends State<ContactAddScreen> {
   String searchText = '';
   DateTime encryptTime;
 
+  bool _maybePop = true;
+
   void init() async {
-    websocketSubscription = websocket.bstream.listen(onSearchResult);
+    websocketSubscription = websocket.bstream.listen(onWebsocketData);
     searchController.addListener(onSearchChange);
     var _dbContacts = await db.getByKey(Enum.DB['contacts']) ?? [];
 
@@ -36,22 +39,49 @@ class ContactAddState extends State<ContactAddScreen> {
     });
   }
 
-  void search(String text) async {
+  void search(String text) {
     encryptTime = new DateTime.now();
 
     if (text.isEmpty) {
       return;
     }
 
-    var data = json.encode({
-      'type': 'server_message',
-      'action': 'search',
-      'data': text.toLowerCase(),
-      'to': null,
-      'encrypt_time': encryptTime.toUtc().toIso8601String(),
-    });
+    ContactService.search(text, encryptTime: encryptTime);
+  }
 
-    websocket.send(data);
+  void searchResult(Map<String, dynamic> jsonData) {
+    var encryptTimeResult = DateTime.parse(jsonData['encrypt_time']);
+    if (encryptTime.millisecondsSinceEpoch ==
+        encryptTimeResult.millisecondsSinceEpoch) {
+      setState(() {
+        contacts = List<String>.from(jsonData['data']);
+      });
+    }
+  }
+
+  void getOpenKey(String username) {
+    encryptTime = new DateTime.now();
+    ContactService.getOpenKey([username], encryptTime: encryptTime);
+  }
+
+  Future getOpenKeyResult(Map<String, dynamic> jsonData) async {
+    var encryptTimeResult = DateTime.parse(jsonData['encrypt_time']);
+    if (encryptTime.millisecondsSinceEpoch ==
+        encryptTimeResult.millisecondsSinceEpoch) {
+      try {
+        Map<String, dynamic> data = jsonData['data'][0];
+        int index =
+            dbContacts.indexWhere((item) => item['username'] == data['name']);
+        if (index != -1) {
+          dbContacts[index]['publicKey'] = data['open_key'];
+          await db.setByKey(Enum.DB['contacts'], dbContacts);
+          _maybePop = false;
+          Navigator.pop(context, dbContacts[index]['username']);
+        }
+      } catch (e) {
+        print('getOpenKeyResult error: ${e.toString()}');
+      }
+    }
   }
 
   Future addContact(username) async {
@@ -67,6 +97,7 @@ class ContactAddState extends State<ContactAddScreen> {
       contacts.add(contact.toJson());
       contacts.sort(Helper.sortByUsername);
       await db.setByKey(Enum.DB['contacts'], contacts);
+      dbContacts = List<Map<String, dynamic>>.from(contacts);
 
       return username;
     }
@@ -74,20 +105,19 @@ class ContactAddState extends State<ContactAddScreen> {
     return null;
   }
 
-  void onSearchResult(data) {
+  void onWebsocketData(data) {
     try {
-      var decoded = json.decode(data);
-      if (decoded['action'] == 'search') {
-        var encryptTimeResult = DateTime.parse(decoded['encrypt_time']);
-        if (encryptTime.millisecondsSinceEpoch ==
-            encryptTimeResult.millisecondsSinceEpoch) {
-          setState(() {
-            contacts = List<String>.from(decoded['data']);
-          });
-        }
+      var jsonData = json.decode(data);
+      switch (jsonData['action']) {
+        case 'search':
+          searchResult(jsonData);
+          break;
+        case 'get_open_key':
+          getOpenKeyResult(jsonData);
+          break;
       }
     } catch (e) {
-      print('onSearchResult error: ${e.toString()}');
+      print('onWebsocketData error: ${e.toString()}');
     }
   }
 
@@ -112,7 +142,14 @@ class ContactAddState extends State<ContactAddScreen> {
 
   void onContactTap(username) async {
     var result = await addContact(username);
-    Navigator.pop(context, result);
+    getOpenKey(username);
+
+    var timeOut = const Duration(seconds: 1);
+    new Timer(timeOut, () {
+      if (_maybePop) {
+        Navigator.pop(context, result);
+      }
+    });
   }
 
   @override

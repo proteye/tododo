@@ -38,9 +38,9 @@ String formatBytesAsHexString(Uint8List bytes) {
 }
 
 List<int> decodePEM(pem) {
-  var startsWith = ["-----BEGIN PUBLIC KEY-----", "-----BEGIN PRIVATE KEY-----"];
-  var endsWith = ["-----END PUBLIC KEY-----", "-----END PRIVATE KEY-----"];
-  
+  var startsWith = ["-----BEGIN PUBLIC KEY-----", "-----BEGIN PRIVATE KEY-----", "-----BEGIN PGP PUBLIC KEY BLOCK-----\r\nVersion: React-Native-OpenPGP.js 0.1\r\nComment: http://openpgpjs.org\r\n\r\n", "-----BEGIN PGP PRIVATE KEY BLOCK-----\r\nVersion: React-Native-OpenPGP.js 0.1\r\nComment: http://openpgpjs.org\r\n\r\n"];
+  var endsWith = ["-----END PUBLIC KEY-----", "-----END PRIVATE KEY-----", "-----END PGP PUBLIC KEY BLOCK-----", "-----END PGP PRIVATE KEY BLOCK-----"];
+
   for (var s in startsWith) {
     if (pem.startsWith(s)) {
       pem = pem.substring(s.length);
@@ -54,7 +54,7 @@ List<int> decodePEM(pem) {
 
   pem = pem.replaceAll('\n', '');
   pem = pem.replaceAll('\r', '');
-  
+
   return base64.decode(pem);
 }
 
