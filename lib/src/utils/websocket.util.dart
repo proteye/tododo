@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
@@ -6,6 +7,8 @@ import '../config.dart';
 
 class Websocket {
   WebSocketChannel channel;
+  Stream<dynamic> bstream;
+  StreamSubscription<dynamic> subscription;
 
   static final Websocket _websocket = new Websocket._internal();
 
@@ -15,7 +18,7 @@ class Websocket {
 
   Websocket._internal();
 
-  WebSocketChannel connect(
+  void connect(
       {String deviceId,
       String username,
       String password,
@@ -32,16 +35,14 @@ class Websocket {
         hashKey: hashKey);
 
     channel = IOWebSocketChannel.connect(url, headers: _headers);
-
-    channel.stream.listen(onData, onError: onError, onDone: onDone);
-
-    return channel;
+    bstream = channel.stream.asBroadcastStream();
+    subscription = bstream.listen(onData, onError: onError, onDone: onDone);
   }
 
-  void sendMessage(String text) {
-    if (channel != null && channel.closeCode == null && text.isNotEmpty) {
-      print('Websocket send: $text');
-      channel.sink.add(text);
+  void send(String message) {
+    if (channel != null && channel.closeCode == null && message.isNotEmpty) {
+      print('Websocket send: $message');
+      channel.sink.add(message);
     }
   }
 
@@ -51,8 +52,29 @@ class Websocket {
     }
   }
 
+  void sendDeliveryReport(data) {
+    var jsonData = json.decode(data);
+    var _encryptTime = jsonData['encrypt_time'] ?? null;
+    var _action = jsonData['action'] ?? null;
+
+    if (_encryptTime == null || _action == null || _action == 'delivery_report') {
+      return;
+    }
+
+    var reportData = json.encode({
+      'type': 'server_message',
+      'action': 'delivery_report',
+      'data': {'encrypt_time': _encryptTime},
+      'to': null,
+      // 'encrypt_time': DateTime.now().toUtc().toIso8601String(),
+    });
+
+    send(reportData);
+  }
+
   void onData(data) {
     print('Websocket received: ${data.toString()}');
+    sendDeliveryReport(data);
   }
 
   void onError(error) {
@@ -63,6 +85,7 @@ class Websocket {
     print('Websocket done');
     print('Close code: ${channel.closeCode}');
     print('Close reason: ${channel.closeReason}');
+    subscription.cancel();
   }
 
   Map<String, String> _getHeaders(

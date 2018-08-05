@@ -45,7 +45,7 @@ class RsaHelper {
     return new String.fromCharCodes(decrypted);
   }
 
-  static RSAPublicKey parsePublicKeyFromPem(pemString) {
+  static RSAPublicKey parsePublicKeyFromPem(String pemString) {
     List<int> publicKeyDER = decodePEM(pemString);
     var asn1Parser = new ASN1Parser(publicKeyDER);
     var topLevelSeq = asn1Parser.nextObject() as ASN1Sequence;
@@ -62,7 +62,7 @@ class RsaHelper {
     return rsaPublicKey;
   }
 
-  static RSAPrivateKey parsePrivateKeyFromPem(pemString) {
+  static RSAPrivateKey parsePrivateKeyFromPem(String pemString) {
     List<int> privateKeyDER = decodePEM(pemString);
     var asn1Parser = new ASN1Parser(privateKeyDER);
     var topLevelSeq = asn1Parser.nextObject() as ASN1Sequence;

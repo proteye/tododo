@@ -25,6 +25,7 @@ class BottomNavbarState extends State<BottomNavbarScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomPadding: true,
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: onNavbarTap,
