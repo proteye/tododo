@@ -1,14 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import "package:pointycastle/export.dart";
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:tododo/src/models/account.model.dart';
 import 'package:tododo/src/models/registerForm.model.dart';
 import 'package:tododo/src/services/auth.service.dart';
+import 'package:tododo/src/utils/hash.util.dart';
 import 'package:tododo/src/utils/rsa.util.dart';
-import 'package:tododo/src/utils/convert.util.dart';
 import 'package:tododo/src/utils/formatter.util.dart';
 import 'package:tododo/src/utils/device.util.dart';
 import 'package:tododo/src/config.dart';
@@ -211,10 +210,7 @@ class RegisterEmailFormState extends State<RegisterEmailScreen> {
     widget.form.publicKey = RsaHelper.encodePublicKeyToPem(keyPair.publicKey);
     // print(widget.form.publicKey);
 
-    Digest sha256 = new SHA256Digest();
-    var hashPrivateKey =
-        sha256.process(createUint8ListFromString(widget.form.privateKey));
-    widget.form.hashKey = formatBytesAsHexString(hashPrivateKey);
+    widget.form.hashKey = HashHelper.hexSha256(widget.form.privateKey);
     // print(widget.form.hashKey);
 
     widget.form.platform = DeviceHelper.getPlatform(context);
@@ -223,7 +219,7 @@ class RegisterEmailFormState extends State<RegisterEmailScreen> {
     var device = await DeviceHelper.getDeviceDetails(widget.form.platform);
     widget.form.deviceId = device['deviceId'];
     widget.form.deviceName = device['deviceName'];
-    print(device);
+    // print(device);
 
     var registerParams = widget.form.toMap();
     var result = await AuthService.register(null, params: registerParams);

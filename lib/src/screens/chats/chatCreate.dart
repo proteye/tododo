@@ -44,7 +44,6 @@ class ChatCreateState extends State<ChatCreateScreen> {
       name: '@${contact['nickname']}',
       owner: account.username,
       members: [account.username, contact['username']],
-      membersHash: '',
       type: 'private',
       avatar: '',
       contacts: [contact],

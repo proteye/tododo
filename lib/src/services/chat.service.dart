@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:tododo/src/models/chat.model.dart';
 import 'package:tododo/src/utils/enum.util.dart';
+import 'package:tododo/src/utils/helper.util.dart';
 import 'package:tododo/src/utils/rsa.util.dart';
 import 'package:tododo/src/utils/websocket.util.dart';
 import 'package:tododo/src/utils/db.util.dart';
@@ -25,7 +26,7 @@ class ChatService {
   ChatService._internal();
 
   Future<void> init() async {
-    var jsonChats = await db.getByKey(Enum.DB['chats']) ?? [];
+    var jsonChats = await db.getByKey(Enum.DB['chats']) ?? '[]';
     jsonChats = json.decode(jsonChats);
 
     for (var jsonChat in jsonChats) {
@@ -40,8 +41,8 @@ class ChatService {
       chats.add(chat);
       var jsonChats = json.encode(chats);
       await db.setByKey(Enum.DB['chats'], jsonChats);
-      var test = await db.getByKey(Enum.DB['chats']) ?? [];
-      print('chat created: ${json.decode(test).length}');
+      // var test = await db.getByKey(Enum.DB['chats']) ?? [];
+      // print('chat created: ${json.decode(test).length}');
       sendCreateChat(
         chat.contacts[0]['username'],
         chat.contacts[0]['publicKey'],
@@ -85,12 +86,35 @@ class ChatService {
     return chats.where((item) => item.name.indexOf(text) >= 0).toList();
   }
 
+  Future<ChatModel> receiveCreate(String payload, String privateKey) async {
+    ChatModel chat;
+
+    try {
+      var _privateKey = RsaHelper.parsePrivateKeyFromPem(privateKey);
+      var _decrypted = RsaHelper.decrypt(payload, _privateKey);
+      chat = ChatModel.fromJson(json.decode(_decrypted));
+      chat.name = Helper.getAtNickname(chat.owner);
+      chat.contacts = []; // TODO - add contact
+      chats.add(chat);
+      var jsonChats = json.encode(chats);
+      await db.setByKey(Enum.DB['chats'], jsonChats);
+      // var test = await db.getByKey(Enum.DB['chats']) ?? [];
+      // print('chat created: ${json.decode(test).length}');
+    } catch (e) {
+      print('ChatService.create error: ${e.toString()}');
+      return null;
+    }
+
+    return chat;
+  }
+
   static void sendCreateChat(String username, String publicKey, ChatModel chat,
       {DateTime encryptTime}) {
     var _encryptTime = encryptTime != null
         ? encryptTime.toUtc().toIso8601String()
         : DateTime.now().toUtc().toIso8601String();
-    String encrypted = '';
+    var _meta = Map.from(Config.MESSAGE_META);
+    _meta['id'] = chat.id;
 
     try {
       var _chat = chat.toJson();
@@ -103,11 +127,11 @@ class ChatService {
         'dateSend': _chat['dateSend'],
       });
       var _publicKey = RsaHelper.parsePublicKeyFromPem(publicKey);
-      encrypted = RsaHelper.encrypt(_data, _publicKey);
+      var _encrypted = RsaHelper.encrypt(_data, _publicKey);
       var data = json.encode({
         'type': 'client_message',
         'action': 'create_chat',
-        'data': {'meta': meta, 'files': {}, 'payload': encrypted},
+        'data': {'meta': _meta, 'files': {}, 'payload': _encrypted},
         'to': [username],
         'encrypt_time': _encryptTime,
       });

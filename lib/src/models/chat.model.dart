@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:tododo/src/utils/hash.util.dart';
 import 'package:tododo/src/utils/db.util.dart';
 
 class ChatModel {
@@ -46,7 +47,7 @@ class ChatModel {
     this.name = name ?? '';
     this.owner = owner ?? '';
     this.members = members ?? [];
-    this.membersHash = membersHash ?? '';
+    this.membersHash = ''; // membersHash ?? HashHelper.hexSha256(this.members.toString());
     this.type = type ?? '';
     this.avatar = avatar ?? '';
     this.lastMessage = lastMessage ?? {};
@@ -67,23 +68,26 @@ class ChatModel {
       id: json['id'] as String,
       name: json['name'] as String,
       owner: json['owner'] as String,
-      members: List<String>.from(json['members']),
+      members: json['members'] != null ? List<String>.from(json['members']) : [],
       membersHash: json['membersHash'] as String,
       type: json['type'] as String,
       avatar: json['avatar'] as String,
-      lastMessage: json['lastMessage'] as Map<String, dynamic>,
-      contacts: List<Map<String, dynamic>>.from(json['contacts']),
+      lastMessage: json['lastMessage'] as Map<String, dynamic> ?? {},
+      contacts: json['contacts'] != null ? List<Map<String, dynamic>>.from(json['contacts']) : [],
       unreadCount: json['unreadCount'] as int,
       sort: json['sort'] as int,
       pin: json['pin'] as int,
       isMuted: json['isMuted'] as bool,
       isDeleted: json['isDeleted'] as bool,
       salt: json['salt'] as String,
-      dateSend: json['dateSend'] != null ? DateTime.parse(json['dateSend']) : null,
-      dateCreate:
-          json['dateCreate'] != null ? DateTime.parse(json['dateCreate']) : null,
-      dateUpdate:
-          json['dateUpdate'] != null ? DateTime.parse(json['dateUpdate']) : null,
+      dateSend:
+          json['dateSend'] != null ? DateTime.parse(json['dateSend']) : null,
+      dateCreate: json['dateCreate'] != null
+          ? DateTime.parse(json['dateCreate'])
+          : null,
+      dateUpdate: json['dateUpdate'] != null
+          ? DateTime.parse(json['dateUpdate'])
+          : null,
     );
   }
 

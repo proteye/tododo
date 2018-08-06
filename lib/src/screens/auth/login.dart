@@ -52,32 +52,14 @@ class LoginFormState extends State<LoginScreen> {
   }
 
   void signin() async {
-    final prefs = await SharedPreferences.getInstance();
-    var accountJson = json.decode(prefs.getString('account'));
-    AccountModel account = AccountModel.fromJson(accountJson);
-    // print('account: ${account}');
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      var accountString = prefs.getString('account') ?? '{}';
+      var accountJson = json.decode(accountString);
+      AccountModel account = AccountModel.fromJson(accountJson);
+      // print('account: ${account}');
 
-    if (login != account.nickname) {
-      showInSnackBar('Failure! Wrong login or password',
-          duration: Duration(seconds: 3), error: true);
-      setState(() {
-        _disabled = false;
-      });
-      return;
-    }
-
-    showInSnackBar('Signing in...', duration: Duration(seconds: 3));
-
-    websocket.connect(
-        username: account.username,
-        password: password,
-        deviceId: account.deviceId,
-        hashKey: account.hashKey);
-
-    var timeOut = const Duration(seconds: 3);
-    new Timer(timeOut, () async {
-      // login failed
-      if (websocket.channel.closeCode != null) {
+      if (login != account.nickname) {
         showInSnackBar('Failure! Wrong login or password',
             duration: Duration(seconds: 3), error: true);
         setState(() {
@@ -86,20 +68,48 @@ class LoginFormState extends State<LoginScreen> {
         return;
       }
 
-      // login success
-      var dbResult = await db.open(dbName: account.nickname);
-      if (dbResult == null) {
-        showInSnackBar('Failure! Database connection error',
-            duration: Duration(seconds: 3), error: true);
-        return;
-      }
+      showInSnackBar('Signing in...', duration: Duration(seconds: 3));
 
-      prefs.setBool('authorized', true);
-      Navigator.pushNamedAndRemoveUntil(context, '/main', (route) => false);
+      websocket.connect(
+          username: account.username,
+          password: password,
+          deviceId: account.deviceId,
+          hashKey: account.hashKey);
+
+      var timeOut = const Duration(seconds: 3);
+      new Timer(timeOut, () async {
+        // login failed
+        if (websocket.channel.closeCode != null) {
+          showInSnackBar('Failure! Wrong login or password',
+              duration: Duration(seconds: 3), error: true);
+          setState(() {
+            _disabled = false;
+          });
+          return;
+        }
+
+        // login success
+        var dbResult = await db.open(dbName: account.nickname);
+        if (dbResult == null) {
+          showInSnackBar('Failure! Database connection error',
+              duration: Duration(seconds: 3), error: true);
+          return;
+        }
+
+        prefs.setBool('authorized', true);
+        Navigator.pushNamedAndRemoveUntil(context, '/main', (route) => false);
+        setState(() {
+          _disabled = false;
+        });
+      });
+    } catch (e) {
+      print('LoginFormState.signin error: ${e.toString()}');
+      showInSnackBar('Failure! Wrong login or password',
+          duration: Duration(seconds: 3), error: true);
       setState(() {
         _disabled = false;
       });
-    });
+    }
   }
 
   void onLogin() async {

@@ -1,13 +1,19 @@
-import 'dart:core';
+import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:tododo/src/models/account.model.dart';
 import 'package:tododo/src/models/chat.model.dart';
+import 'package:tododo/src/services/account.service.dart';
 import 'package:tododo/src/services/chat.service.dart';
 import 'package:tododo/src/utils/formatter.util.dart';
+import 'package:tododo/src/utils/websocket.util.dart';
 import 'package:tododo/src/utils/db.util.dart';
 
 Db db = new Db();
+Websocket websocket = new Websocket();
+AccountService accountService = new AccountService();
 ChatService chatService = new ChatService();
 
 class ChatListScreen extends StatefulWidget {
@@ -17,10 +23,14 @@ class ChatListScreen extends StatefulWidget {
 
 class ChatListState extends State<ChatListScreen> {
   final searchController = TextEditingController();
+  final AccountModel account = accountService.account;
+
+  StreamSubscription<dynamic> websocketSubscription;
   List<ChatModel> chats = [];
   String searchText = '';
 
   void init() async {
+    websocketSubscription = websocket.bstream.listen(onWebsocketData);
     searchController.addListener(onSearchChange);
     await chatService.init();
 
@@ -37,6 +47,32 @@ class ChatListState extends State<ChatListScreen> {
     setState(() {
       chats = chatService.find(text);
     });
+  }
+
+  Future receiveCreateChat(jsonData) async {
+    try {
+      Map<String, dynamic> data = jsonData['data'];
+      String payload = data['payload'];
+      await chatService.receiveCreate(payload, account.privateKey);
+      setState(() {
+        chats = chatService.chats;
+      });
+    } catch (e) {
+      print('ChatListState.createChatReceive error: ${e.toString()}');
+    }
+  }
+
+  void onWebsocketData(data) {
+    try {
+      var jsonData = json.decode(data);
+      switch (jsonData['action']) {
+        case 'create_chat':
+          receiveCreateChat(jsonData);
+          break;
+      }
+    } catch (e) {
+      print('onWebsocketData error: ${e.toString()}');
+    }
   }
 
   void onSearchChange() {
@@ -76,6 +112,7 @@ class ChatListState extends State<ChatListScreen> {
   void dispose() {
     searchController.removeListener(onSearchChange);
     searchController.dispose();
+    websocketSubscription.cancel();
     super.dispose();
   }
 
@@ -129,7 +166,8 @@ class ChatListState extends State<ChatListScreen> {
                         itemCount: chats.length,
                         itemBuilder: (context, index) {
                           var chat = chats[index];
-                          var subTitle = chat.lastMessage != null && chat.lastMessage.isNotEmpty
+                          var subTitle = chat.lastMessage != null &&
+                                  chat.lastMessage.isNotEmpty
                               ? '${chat.lastMessage['username']}: ${chat.lastMessage['text']}'
                               : 'You have no messages yet';
 
