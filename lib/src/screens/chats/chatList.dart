@@ -5,8 +5,10 @@ import 'package:flutter/services.dart';
 
 import 'package:tododo/src/models/account.model.dart';
 import 'package:tododo/src/models/chat.model.dart';
+import 'package:tododo/src/models/hashKey.model.dart';
 import 'package:tododo/src/services/account.service.dart';
 import 'package:tododo/src/services/chat.service.dart';
+import 'package:tododo/src/services/hashKey.service.dart';
 import 'package:tododo/src/utils/formatter.util.dart';
 import 'package:tododo/src/utils/websocket.util.dart';
 import 'package:tododo/src/utils/db.util.dart';
@@ -15,6 +17,7 @@ Db db = new Db();
 Websocket websocket = new Websocket();
 AccountService accountService = new AccountService();
 ChatService chatService = new ChatService();
+HashKeyService hashKeyService = new HashKeyService();
 
 class ChatListScreen extends StatefulWidget {
   @override
@@ -49,17 +52,31 @@ class ChatListState extends State<ChatListScreen> {
     });
   }
 
-  Future receiveCreateChat(jsonData) async {
+  Future<ChatModel> receiveCreateChat(jsonData) async {
+    ChatModel chat;
+
     try {
       Map<String, dynamic> data = jsonData['data'];
       String payload = data['payload'];
-      await chatService.receiveCreate(payload, account.privateKey);
+      chat = await chatService.receiveCreate(payload, account.privateKey);
       setState(() {
         chats = chatService.chats;
       });
+
+      // calculate and add the hashKey
+      if (chat != null) {
+        String hashString = HashKeyService.generateHash(
+            chat.dateSend, chat.sendData, chat.salt);
+        HashKeyModel hashKey = HashKeyModel(
+            chatId: chat.id, hashKey: hashString, dateSend: chat.dateSend);
+        hashKeyService.add(hashKey);
+      }
     } catch (e) {
       print('ChatListState.createChatReceive error: ${e.toString()}');
+      return null;
     }
+
+    return chat;
   }
 
   void onWebsocketData(data) {

@@ -43,22 +43,31 @@ class ChatCreateState extends State<ChatCreateScreen> {
   }
 
   Future<ChatModel> createChat(contact) async {
-    ChatModel chat = ChatModel(
-      name: '@${contact['nickname']}',
-      owner: account.username,
-      members: [account.username, contact['username']],
-      type: 'private',
-      avatar: '',
-      contacts: [contact],
-    );
-    chatService.create(chat);
+    ChatModel chat;
 
-    // generate and add hashKey
-    String hashString =
-        HashKeyService.generateHash(chat.dateSend, chat.sendData, chat.salt);
-    HashKeyModel hashKey = HashKeyModel(
-        chatId: chat.id, hashKey: hashString, dateSend: chat.dateSend);
-    hashKeyService.add(hashKey);
+    try {
+      chat = ChatModel(
+        name: '@${contact['nickname']}',
+        owner: account.username,
+        members: [account.username, contact['username']],
+        type: 'private',
+        avatar: '',
+        contacts: [contact],
+      );
+      chatService.create(chat);
+
+      // calculate and add the hashKey
+      if (chat != null) {
+        String hashString = HashKeyService.generateHash(
+            chat.dateSend, chat.sendData, chat.salt);
+        HashKeyModel hashKey = HashKeyModel(
+            chatId: chat.id, hashKey: hashString, dateSend: chat.dateSend);
+        hashKeyService.add(hashKey);
+      }
+    } catch (e) {
+      print('ChatCreateState.createChat error: ${e.toString()}');
+      return null;
+    }
 
     return chat;
   }
