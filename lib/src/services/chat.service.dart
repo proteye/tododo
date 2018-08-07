@@ -41,7 +41,7 @@ class ChatService {
       chats.add(chat);
       var jsonChats = json.encode(chats);
       await db.setByKey(Enum.DB['chats'], jsonChats);
-      // var test = await db.getByKey(Enum.DB['chats']) ?? [];
+      // var test = await db.getByKey(Enum.DB['chats']) ?? '[]';
       // print('chat created: ${json.decode(test).length}');
       sendCreateChat(
         chat.contacts[0]['username'],
@@ -98,7 +98,7 @@ class ChatService {
       chats.add(chat);
       var jsonChats = json.encode(chats);
       await db.setByKey(Enum.DB['chats'], jsonChats);
-      // var test = await db.getByKey(Enum.DB['chats']) ?? [];
+      // var test = await db.getByKey(Enum.DB['chats']) ?? '[]';
       // print('chat created: ${json.decode(test).length}');
     } catch (e) {
       print('ChatService.create error: ${e.toString()}');
@@ -117,17 +117,8 @@ class ChatService {
     _meta['id'] = chat.id;
 
     try {
-      var _chat = chat.toJson();
-      var _data = json.encode({
-        'id': _chat['id'],
-        'owner': _chat['owner'],
-        'members': _chat['members'],
-        'membersHash': _chat['membersHash'],
-        'salt': _chat['salt'],
-        'dateSend': _chat['dateSend'],
-      });
       var _publicKey = RsaHelper.parsePublicKeyFromPem(publicKey);
-      var _encrypted = RsaHelper.encrypt(_data, _publicKey);
+      var _encrypted = RsaHelper.encrypt(chat.sendData, _publicKey);
       var data = json.encode({
         'type': 'client_message',
         'action': 'create_chat',
