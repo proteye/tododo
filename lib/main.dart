@@ -13,5 +13,8 @@ void main() {
     ),
     initialRoute: '/',
     routes: Routing.routes(),
+    onGenerateRoute: (routeSettings) {
+      return Routing.onGenerateRoute(routeSettings);
+    },
   ));
 }

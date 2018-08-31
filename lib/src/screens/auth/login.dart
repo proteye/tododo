@@ -40,13 +40,12 @@ class LoginFormState extends State<LoginScreen> {
   void init() async {
     final prefs = await SharedPreferences.getInstance();
     bool authorized = prefs.getBool('authorized') ?? false;
+
     if (authorized) {
-      var accountJson = json.decode(prefs.getString('account'));
-      setState(() {
-        _disabled = true;
-        login = accountJson['nickname'];
-        password = accountJson['password'];
-      });
+      var accountString = prefs.getString('account') ?? '{}';
+      var accountJson = json.decode(accountString);
+      login = accountJson['nickname'];
+      password = accountJson['password'];
       signin();
     }
   }

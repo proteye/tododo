@@ -15,7 +15,7 @@ final Map<String, String> meta = Config.MESSAGE_META;
 
 class ChatService {
   List<ChatModel> chats = [];
-  ChatModel currentChat = ChatModel();
+  ChatModel currentChat;
 
   static final ChatService _chatService = new ChatService._internal();
 
@@ -33,6 +33,20 @@ class ChatService {
       ChatModel chat = ChatModel.fromJson(jsonChat);
       chats.add(chat);
     }
+  }
+
+  Future<ChatModel> loadById(String id) async {
+    try {
+      var jsonChats = await db.getByKey(Enum.DB['chats']) ?? '[]';
+      jsonChats = json.decode(jsonChats);
+      var jsonCurrentChat = jsonChats.singleWhere((item) => id == item['id']);
+      currentChat = ChatModel.fromJson(jsonCurrentChat);
+    } catch (e) {
+      print('ChatService.loadById error: ${e.toString()}');
+      return null;
+    }
+
+    return currentChat;
   }
 
   Future<ChatModel> create(ChatModel chat) async {
@@ -101,7 +115,7 @@ class ChatService {
       // var test = await db.getByKey(Enum.DB['chats']) ?? '[]';
       // print('chat created: ${json.decode(test).length}');
     } catch (e) {
-      print('ChatService.create error: ${e.toString()}');
+      print('ChatService.receiveCreate error: ${e.toString()}');
       return null;
     }
 
@@ -113,7 +127,7 @@ class ChatService {
     var _encryptTime = encryptTime != null
         ? encryptTime.toUtc().toIso8601String()
         : DateTime.now().toUtc().toIso8601String();
-    var _meta = Map.from(Config.MESSAGE_META);
+    var _meta = Map.from(meta);
     _meta['id'] = chat.id;
 
     try {

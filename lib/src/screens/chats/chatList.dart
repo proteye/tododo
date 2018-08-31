@@ -25,7 +25,7 @@ class ChatListScreen extends StatefulWidget {
 }
 
 class ChatListState extends State<ChatListScreen> {
-  final searchController = TextEditingController();
+  final _searchController = TextEditingController();
   final AccountModel account = accountService.account;
 
   StreamSubscription<dynamic> websocketSubscription;
@@ -34,7 +34,7 @@ class ChatListState extends State<ChatListScreen> {
 
   void init() async {
     websocketSubscription = websocket.bstream.listen(onWebsocketData);
-    searchController.addListener(onSearchChange);
+    _searchController.addListener(onSearchChange);
     await chatService.init();
 
     setState(() {
@@ -96,19 +96,19 @@ class ChatListState extends State<ChatListScreen> {
     var prevSearchText = searchText;
 
     setState(() {
-      if (searchController.text.isEmpty) {
+      if (_searchController.text.isEmpty) {
         chats = chatService.chats;
       }
-      searchText = searchController.text;
+      searchText = _searchController.text;
     });
 
-    if (prevSearchText != searchController.text) {
-      search(searchController.text);
+    if (prevSearchText != _searchController.text) {
+      search(_searchController.text);
     }
   }
 
   void onSearchClear() {
-    searchController.clear();
+    _searchController.clear();
   }
 
   void onChatCreate() async {
@@ -117,7 +117,9 @@ class ChatListState extends State<ChatListScreen> {
     if (result != null) {}
   }
 
-  void onChatTap(chat) {}
+  void onChatTap(chat) {
+    Navigator.pushNamed(context, '/chatMessage/${chat.id}');
+  }
 
   @override
   void initState() {
@@ -127,8 +129,8 @@ class ChatListState extends State<ChatListScreen> {
 
   @override
   void dispose() {
-    searchController.removeListener(onSearchChange);
-    searchController.dispose();
+    _searchController.removeListener(onSearchChange);
+    _searchController.dispose();
     websocketSubscription.cancel();
     super.dispose();
   }
@@ -157,7 +159,7 @@ class ChatListState extends State<ChatListScreen> {
             SizedBox(height: 15.0),
             TextField(
               key: Key('search'),
-              controller: searchController,
+              controller: _searchController,
               autocorrect: false,
               decoration: InputDecoration(
                 filled: true,
