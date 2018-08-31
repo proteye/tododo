@@ -11,8 +11,8 @@ import 'package:tododo/src/utils/helper.util.dart';
 import 'package:tododo/src/utils/websocket.util.dart';
 import 'package:tododo/src/utils/db.util.dart';
 
-Websocket websocket = new Websocket();
 Db db = new Db();
+Websocket websocket = new Websocket();
 
 class ContactAddScreen extends StatefulWidget {
   @override

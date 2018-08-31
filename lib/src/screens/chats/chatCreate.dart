@@ -4,15 +4,18 @@ import 'package:flutter/services.dart';
 
 import 'package:tododo/src/models/account.model.dart';
 import 'package:tododo/src/models/chat.model.dart';
+import 'package:tododo/src/models/hashKey.model.dart';
 import 'package:tododo/src/services/account.service.dart';
 import 'package:tododo/src/services/chat.service.dart';
+import 'package:tododo/src/services/hashKey.service.dart';
 import 'package:tododo/src/utils/enum.util.dart';
 import 'package:tododo/src/utils/formatter.util.dart';
 import 'package:tododo/src/utils/db.util.dart';
 
 Db db = new Db();
-ChatService chatService = new ChatService();
 AccountService accountService = new AccountService();
+ChatService chatService = new ChatService();
+HashKeyService hashKeyService = new HashKeyService();
 
 class ChatCreateScreen extends StatefulWidget {
   @override
@@ -40,17 +43,33 @@ class ChatCreateState extends State<ChatCreateScreen> {
   }
 
   Future<ChatModel> createChat(contact) async {
-    var chat = ChatModel(
-      name: '@${contact['nickname']}',
-      owner: account.username,
-      members: [account.username, contact['username']],
-      membersHash: '',
-      type: 'private',
-      avatar: '',
-      contacts: [contact],
-    );
+    ChatModel chat;
 
-    return chatService.create(chat);
+    try {
+      chat = ChatModel(
+        name: '@${contact['nickname']}',
+        owner: account.username,
+        members: [account.username, contact['username']],
+        type: 'private',
+        avatar: '',
+        contacts: [contact],
+      );
+      chatService.create(chat);
+
+      // calculate and add the hashKey
+      if (chat != null) {
+        String hashString = HashKeyService.generateHash(
+            chat.dateSend, chat.sendData, chat.salt);
+        HashKeyModel hashKey = HashKeyModel(
+            chatId: chat.id, hashKey: hashString, dateSend: chat.dateSend);
+        hashKeyService.add(hashKey);
+      }
+    } catch (e) {
+      print('ChatCreateState.createChat error: ${e.toString()}');
+      return null;
+    }
+
+    return chat;
   }
 
   void search(String text) async {

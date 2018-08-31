@@ -1,14 +1,23 @@
-import 'dart:core';
+import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:tododo/src/models/account.model.dart';
 import 'package:tododo/src/models/chat.model.dart';
+import 'package:tododo/src/models/hashKey.model.dart';
+import 'package:tododo/src/services/account.service.dart';
 import 'package:tododo/src/services/chat.service.dart';
+import 'package:tododo/src/services/hashKey.service.dart';
 import 'package:tododo/src/utils/formatter.util.dart';
+import 'package:tododo/src/utils/websocket.util.dart';
 import 'package:tododo/src/utils/db.util.dart';
 
 Db db = new Db();
+Websocket websocket = new Websocket();
+AccountService accountService = new AccountService();
 ChatService chatService = new ChatService();
+HashKeyService hashKeyService = new HashKeyService();
 
 class ChatListScreen extends StatefulWidget {
   @override
@@ -16,12 +25,16 @@ class ChatListScreen extends StatefulWidget {
 }
 
 class ChatListState extends State<ChatListScreen> {
-  final searchController = TextEditingController();
+  final _searchController = TextEditingController();
+  final AccountModel account = accountService.account;
+
+  StreamSubscription<dynamic> websocketSubscription;
   List<ChatModel> chats = [];
   String searchText = '';
 
   void init() async {
-    searchController.addListener(onSearchChange);
+    websocketSubscription = websocket.bstream.listen(onWebsocketData);
+    _searchController.addListener(onSearchChange);
     await chatService.init();
 
     setState(() {
@@ -39,23 +52,63 @@ class ChatListState extends State<ChatListScreen> {
     });
   }
 
+  Future<ChatModel> receiveCreateChat(jsonData) async {
+    ChatModel chat;
+
+    try {
+      Map<String, dynamic> data = jsonData['data'];
+      String payload = data['payload'];
+      chat = await chatService.receiveCreate(payload, account.privateKey);
+      setState(() {
+        chats = chatService.chats;
+      });
+
+      // calculate and add the hashKey
+      if (chat != null) {
+        String hashString = HashKeyService.generateHash(
+            chat.dateSend, chat.sendData, chat.salt);
+        HashKeyModel hashKey = HashKeyModel(
+            chatId: chat.id, hashKey: hashString, dateSend: chat.dateSend);
+        hashKeyService.add(hashKey);
+      }
+    } catch (e) {
+      print('ChatListState.createChatReceive error: ${e.toString()}');
+      return null;
+    }
+
+    return chat;
+  }
+
+  void onWebsocketData(data) {
+    try {
+      var jsonData = json.decode(data);
+      switch (jsonData['action']) {
+        case 'create_chat':
+          receiveCreateChat(jsonData);
+          break;
+      }
+    } catch (e) {
+      print('onWebsocketData error: ${e.toString()}');
+    }
+  }
+
   void onSearchChange() {
     var prevSearchText = searchText;
 
     setState(() {
-      if (searchController.text.isEmpty) {
+      if (_searchController.text.isEmpty) {
         chats = chatService.chats;
       }
-      searchText = searchController.text;
+      searchText = _searchController.text;
     });
 
-    if (prevSearchText != searchController.text) {
-      search(searchController.text);
+    if (prevSearchText != _searchController.text) {
+      search(_searchController.text);
     }
   }
 
   void onSearchClear() {
-    searchController.clear();
+    _searchController.clear();
   }
 
   void onChatCreate() async {
@@ -64,7 +117,9 @@ class ChatListState extends State<ChatListScreen> {
     if (result != null) {}
   }
 
-  void onChatTap(chat) {}
+  void onChatTap(chat) {
+    Navigator.pushNamed(context, '/chatMessage/${chat.id}');
+  }
 
   @override
   void initState() {
@@ -74,8 +129,9 @@ class ChatListState extends State<ChatListScreen> {
 
   @override
   void dispose() {
-    searchController.removeListener(onSearchChange);
-    searchController.dispose();
+    _searchController.removeListener(onSearchChange);
+    _searchController.dispose();
+    websocketSubscription.cancel();
     super.dispose();
   }
 
@@ -103,7 +159,7 @@ class ChatListState extends State<ChatListScreen> {
             SizedBox(height: 15.0),
             TextField(
               key: Key('search'),
-              controller: searchController,
+              controller: _searchController,
               autocorrect: false,
               decoration: InputDecoration(
                 filled: true,
@@ -129,7 +185,8 @@ class ChatListState extends State<ChatListScreen> {
                         itemCount: chats.length,
                         itemBuilder: (context, index) {
                           var chat = chats[index];
-                          var subTitle = chat.lastMessage != null && chat.lastMessage.isNotEmpty
+                          var subTitle = chat.lastMessage != null &&
+                                  chat.lastMessage.isNotEmpty
                               ? '${chat.lastMessage['username']}: ${chat.lastMessage['text']}'
                               : 'You have no messages yet';
 
