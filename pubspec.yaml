@@ -16,7 +16,7 @@ dependencies:
   shared_preferences: ^0.4.2
   path: ^1.5.1
   path_provider: ^0.4.1
-  sembast: ^1.9.1
+  sqflite: ^0.11.2
 
 dev_dependencies:
   flutter_test:

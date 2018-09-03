@@ -1,15 +1,16 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:tododo/src/models/chatMessage.model.dart';
 import 'package:tododo/src/utils/enum.util.dart';
-// import 'package:tododo/src/utils/helper.util.dart';
 import 'package:tododo/src/utils/websocket.util.dart';
 import 'package:tododo/src/utils/db.util.dart';
 import 'package:tododo/src/config.dart';
 
+const TABLE_NAME = 'ChatMessage';
+const COLUMN_ID = 'id';
+
+final Db db = new Db();
 final Websocket websocket = new Websocket();
-Db db = new Db();
 final Map<String, String> meta = Config.MESSAGE_META;
 
 class ChatMessageService {
@@ -26,25 +27,14 @@ class ChatMessageService {
   ChatMessageService._internal();
 
   Future<List<ChatMessageModel>> loadByChatId(String chatId) async {
-    try {
-      chatMessages = [];
+    chatMessages = [];
+    var jsonChatMessages = await db
+        .getByParams(TABLE_NAME, where: 'chatId = ?', whereArgs: [chatId]);
 
-      var jsonChatMessages = await db.getByKey(Enum.DB['chatMessages']) ?? '{}';
-      jsonChatMessages = json.decode(jsonChatMessages);
-
-      if (jsonChatMessages is Map && jsonChatMessages[chatId] != null) {
-        jsonChatMessages = jsonChatMessages[chatId];
-      }
-
-      for (var jsonChatMessage in jsonChatMessages) {
-        ChatMessageModel chatMessage =
-            ChatMessageModel.fromJson(jsonChatMessage);
-        chatMessages.add(chatMessage);
-      }
-      print('chat messages loaded: ${chatMessages.length}');
-    } catch (e) {
-      print('ChatMessageService.loadByChatId error: ${e.toString()}');
-      return [];
+    for (var jsonChatMessage in jsonChatMessages) {
+      ChatMessageModel chatMessage =
+          ChatMessageModel.fromSqlite(jsonChatMessage);
+      chatMessages.add(chatMessage);
     }
 
     return chatMessages;
@@ -53,8 +43,8 @@ class ChatMessageService {
   Future<ChatMessageModel> send(ChatMessageModel chatMessage) async {
     try {
       chatMessages.add(chatMessage);
-      var jsonChatMessages = json.encode(chatMessages);
-      await db.setByKey(Enum.DB['chatMessages'], jsonChatMessages);
+      var result = await db.insert(TABLE_NAME, chatMessage.toSqlite());
+      print('chatMessage created: $result');
     } catch (e) {
       print('ChatMessageService.send error: ${e.toString()}');
       return null;
@@ -70,7 +60,7 @@ class ChatMessageService {
         chatId: chatId,
         type: Enum.MESSAGE_TYPE['text'],
         username: username,
-        text: text,
+        text: text.trim(),
         status: Enum.MESSAGE_STATUS['sent'],
         isOwn: true,
       );
@@ -81,7 +71,7 @@ class ChatMessageService {
     }
   }
 
-  List<ChatMessageModel> find(text) {
+  List<ChatMessageModel> find(String text) {
     return chatMessages.where((item) => item.text.indexOf(text) >= 0).toList();
   }
 
@@ -89,8 +79,7 @@ class ChatMessageService {
       String payload, String hashKey) async {
     ChatMessageModel chatMessage;
 
-    try {
-    } catch (e) {
+    try {} catch (e) {
       print('ChatMessageService.receiveMessage error: ${e.toString()}');
       return null;
     }
@@ -108,8 +97,7 @@ class ChatMessageService {
     _meta['id'] = chatMessage.id;
     _meta['chatId'] = chatMessage.chatId;
 
-    try {
-    } catch (e) {
+    try {} catch (e) {
       print('ChatMessageService.sendMessage error: ${e.toString()}');
     }
   }

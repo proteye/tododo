@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -6,11 +7,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tododo/src/models/account.model.dart';
 import 'package:tododo/src/models/registerForm.model.dart';
 import 'package:tododo/src/services/auth.service.dart';
+import 'package:tododo/src/services/account.service.dart';
 import 'package:tododo/src/utils/hash.util.dart';
 import 'package:tododo/src/utils/rsa.util.dart';
 import 'package:tododo/src/utils/formatter.util.dart';
 import 'package:tododo/src/utils/device.util.dart';
+import 'package:tododo/src/utils/db.util.dart';
 import 'package:tododo/src/config.dart';
+
+Db db = new Db();
+AccountService accountService = AccountService();
 
 // First step
 class RegisterScreen extends StatefulWidget {
@@ -32,9 +38,16 @@ class RegisterFormState extends State<RegisterScreen> {
     ));
   }
 
-  void onContinue() {
+  void onContinue() async {
     if (_formKey.currentState.validate()) {
       // print('login: ${form.login}, password: ${form.password}');
+      var dbResult = await db.open(dbName: form.login);
+
+      if (dbResult == null) {
+        showInSnackBar('Failure! Database connection error');
+        return;
+      }
+
       Navigator.push(
           context,
           MaterialPageRoute(
@@ -234,10 +247,21 @@ class RegisterEmailFormState extends State<RegisterEmailScreen> {
       return;
     }
 
+    String hostname = Config.HOSTNAME;
+    var username = "${registerParams['login']}@$hostname";
+    var prefsAccount = {
+      'username': username,
+      'login': registerParams['login'],
+      'password': registerParams['password'],
+      'hostname': hostname,
+    };
+
+    // save to SharedPreferences
     final prefs = await SharedPreferences.getInstance();
-    var hostname = Config.HOSTNAME;
-    var account = new AccountModel(
-        username: "${registerParams['login']}@$hostname",
+    prefs.setString('account', json.encode(prefsAccount));
+
+    AccountModel account = new AccountModel(
+        username: username,
         nickname: registerParams['login'],
         password: registerParams['password'],
         email: registerParams['email'],
@@ -250,7 +274,9 @@ class RegisterEmailFormState extends State<RegisterEmailScreen> {
         platform: registerParams['platform'],
         settings: registerParams['settings'],
         hostname: hostname);
-    prefs.setString('account', account.toString());
+
+    // save to DB
+    await accountService.insert(account);
 
     showInSnackBar('Congratulations! Registration successful',
         duration: Duration(seconds: 3));

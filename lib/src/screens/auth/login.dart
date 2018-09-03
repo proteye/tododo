@@ -5,12 +5,15 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:tododo/src/models/account.model.dart';
+import 'package:tododo/src/services/account.service.dart';
 import 'package:tododo/src/utils/formatter.util.dart';
 import 'package:tododo/src/utils/websocket.util.dart';
 import 'package:tododo/src/utils/db.util.dart';
+import 'package:tododo/src/config.dart';
 
-Websocket websocket = new Websocket();
 Db db = new Db();
+Websocket websocket = new Websocket();
+AccountService accountService = AccountService();
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -26,6 +29,7 @@ class LoginFormState extends State<LoginScreen> {
 
   String login = '';
   String password = '';
+  String username = '';
   bool createNewKey = false;
 
   void showInSnackBar(String value, {Duration duration, bool error: false}) {
@@ -44,8 +48,9 @@ class LoginFormState extends State<LoginScreen> {
     if (authorized) {
       var accountString = prefs.getString('account') ?? '{}';
       var accountJson = json.decode(accountString);
-      login = accountJson['nickname'];
+      login = accountJson['login'];
       password = accountJson['password'];
+      username = accountJson['username'];
       signin();
     }
   }
@@ -53,12 +58,22 @@ class LoginFormState extends State<LoginScreen> {
   void signin() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      var accountString = prefs.getString('account') ?? '{}';
-      var accountJson = json.decode(accountString);
-      AccountModel account = AccountModel.fromJson(accountJson);
-      // print('account: ${account}');
+      var dbResult = await db.open(dbName: login);
 
-      if (login != account.nickname) {
+      if (dbResult == null) {
+        showInSnackBar('Failure! Database connection error',
+            duration: Duration(seconds: 3), error: true);
+        return;
+      }
+
+      username = username != null && username.isNotEmpty
+          ? username
+          : '${login}@${Config.HOSTNAME}';
+      AccountModel account = await accountService.getByUsername(username);
+      // var accAll = await db.getByParams('Account');
+      // print('account: $accAll');
+
+      if (account == null) {
         showInSnackBar('Failure! Wrong login or password',
             duration: Duration(seconds: 3), error: true);
         setState(() {
@@ -88,13 +103,6 @@ class LoginFormState extends State<LoginScreen> {
         }
 
         // login success
-        var dbResult = await db.open(dbName: account.nickname);
-        if (dbResult == null) {
-          showInSnackBar('Failure! Database connection error',
-              duration: Duration(seconds: 3), error: true);
-          return;
-        }
-
         prefs.setBool('authorized', true);
         Navigator.pushNamedAndRemoveUntil(context, '/main', (route) => false);
         setState(() {

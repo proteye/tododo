@@ -51,14 +51,15 @@ class ChatMessageState extends State<ChatMessageScreen> {
     _searchController.addListener(onSearchChange);
     _messageController.addListener(onMessageChange);
     _messageFocusNode.addListener(onMessageTextFieldFocus);
+
     chat = await chatService.loadById(widget.chatId);
     chatMessages = await chatMessageService.loadByChatId(widget.chatId);
-    _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
-    SchedulerBinding.instance.addPostFrameCallback((_) {
-      _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
-    });
-    // print('chat: $chat');
-    // print('chatMessages: $chatMessages');
+
+    if (chatMessages.length > 0 && _scrollController != null) {
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+      });
+    }
     setState(() {});
   }
 
@@ -126,33 +127,32 @@ class ChatMessageState extends State<ChatMessageScreen> {
   }
 
   void onMessageTextFieldFocus() {
-    if (_messageFocusNode.hasFocus) {
+    if (_messageFocusNode.hasFocus &&
+        _scrollController != null &&
+        _scrollController.hasClients) {
       new Timer(Duration(milliseconds: 300), () {
         SchedulerBinding.instance.addPostFrameCallback((_) {
-          _scrollController.animateTo(
-            _scrollController.position.maxScrollExtent,
-            curve: Curves.easeOut,
-            duration: const Duration(milliseconds: 300),
-          );
+          _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
         });
       });
     }
   }
 
-  void onSendMessage() {
-    print('send: $messageText');
-    setState(() {
-      chatMessageService.sendText(messageText,
-          chatId: chat.id, username: account.username);
-      _messageController.clear();
-    });
-    SchedulerBinding.instance.addPostFrameCallback((_) {
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        curve: Curves.easeOut,
-        duration: const Duration(milliseconds: 300),
-      );
-    });
+  void onSendMessage() async {
+    ChatMessageModel _chatMessage = await chatMessageService
+        .sendText(messageText, chatId: chat.id, username: account.username);
+    _messageController.clear();
+    chatService.updateLastMessage(chat.id, _chatMessage.toJson());
+
+    if (_scrollController != null && _scrollController.hasClients) {
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          curve: Curves.easeOut,
+          duration: const Duration(milliseconds: 300),
+        );
+      });
+    }
   }
 
   @override
@@ -163,12 +163,12 @@ class ChatMessageState extends State<ChatMessageScreen> {
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _searchController.removeListener(onSearchChange);
     _searchController.dispose();
     _messageController.dispose();
     _messageFocusNode.removeListener(onMessageTextFieldFocus);
     _messageFocusNode.dispose();
-    _scrollController.dispose();
     websocketSubscription.cancel();
     super.dispose();
   }

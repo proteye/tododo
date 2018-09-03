@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 
 import 'package:tododo/src/models/contact.model.dart';
 import 'package:tododo/src/services/contact.service.dart';
-import 'package:tododo/src/utils/enum.util.dart';
 import 'package:tododo/src/utils/formatter.util.dart';
 import 'package:tododo/src/utils/helper.util.dart';
 import 'package:tododo/src/utils/websocket.util.dart';
@@ -13,6 +12,7 @@ import 'package:tododo/src/utils/db.util.dart';
 
 Db db = new Db();
 Websocket websocket = new Websocket();
+ContactService contactService = new ContactService();
 
 class ContactAddScreen extends StatefulWidget {
   @override
@@ -20,23 +20,22 @@ class ContactAddScreen extends StatefulWidget {
 }
 
 class ContactAddState extends State<ContactAddScreen> {
-  final searchController = TextEditingController();
-  StreamSubscription<dynamic> websocketSubscription;
-  List<String> contacts = [];
-  List<Map<String, dynamic>> dbContacts = [];
-  String searchText = '';
-  DateTime encryptTime;
+  final _searchController = TextEditingController();
 
   bool _maybePop = true;
 
+  StreamSubscription<dynamic> websocketSubscription;
+  List<String> contacts = []; // from server
+  List<ContactModel> dbContacts = []; // from db
+  String searchText = '';
+  DateTime encryptTime;
+
   void init() async {
     websocketSubscription = websocket.bstream.listen(onWebsocketData);
-    searchController.addListener(onSearchChange);
-    var _dbContacts = await db.getByKey(Enum.DB['contacts']) ?? [];
+    _searchController.addListener(onSearchChange);
+    dbContacts = await contactService.loadAll();
 
-    setState(() {
-      dbContacts = List<Map<String, dynamic>>.from(_dbContacts);
-    });
+    setState(() {});
   }
 
   void search(String text) {
@@ -46,7 +45,7 @@ class ContactAddState extends State<ContactAddScreen> {
       return;
     }
 
-    ContactService.search(text, encryptTime: encryptTime);
+    contactService.search(text, encryptTime: encryptTime);
   }
 
   void searchResult(Map<String, dynamic> jsonData) {
@@ -61,7 +60,7 @@ class ContactAddState extends State<ContactAddScreen> {
 
   void getOpenKey(String username) {
     encryptTime = new DateTime.now();
-    ContactService.getOpenKey([username], encryptTime: encryptTime);
+    contactService.getOpenKey([username], encryptTime: encryptTime);
   }
 
   Future getOpenKeyResult(Map<String, dynamic> jsonData) async {
@@ -70,14 +69,17 @@ class ContactAddState extends State<ContactAddScreen> {
         encryptTimeResult.millisecondsSinceEpoch) {
       try {
         Map<String, dynamic> data = jsonData['data'][0];
-        int index =
-            dbContacts.indexWhere((item) => item['username'] == data['name']);
-        if (index != -1) {
-          dbContacts[index]['publicKey'] = data['open_key'];
-          await db.setByKey(Enum.DB['contacts'], dbContacts);
-          _maybePop = false;
-          Navigator.pop(context, dbContacts[index]['username']);
+        var contact = await contactService.updatePublicKey(
+          data['name'],
+          data['open_key'],
+        );
+
+        if (contact == null) {
+          throw new ArgumentError('contact not found');
         }
+
+        _maybePop = false;
+        Navigator.pop(context, contact.username);
       } catch (e) {
         print('getOpenKeyResult error: ${e.toString()}');
       }
@@ -85,24 +87,17 @@ class ContactAddState extends State<ContactAddScreen> {
   }
 
   Future addContact(username) async {
-    var contacts = await db.getByKey(Enum.DB['contacts']) ?? [];
+    ContactModel contact = await contactService.loadByUsername(username);
 
-    var isAdded = contacts.firstWhere((item) {
-      return item['username'] == username;
-    }, orElse: () {});
-
-    if (isAdded == null) {
-      ContactModel contact = new ContactModel(
+    if (contact == null) {
+      contact = new ContactModel(
           username: username, nickname: Helper.getNickname(username));
-      contacts.add(contact.toJson());
-      contacts.sort(Helper.sortByUsername);
-      await db.setByKey(Enum.DB['contacts'], contacts);
-      dbContacts = List<Map<String, dynamic>>.from(contacts);
-
-      return username;
+      await contactService.create(contact);
     }
 
-    return null;
+    getOpenKey(username);
+
+    return contact != null ? contact.username : null;
   }
 
   void onWebsocketData(data) {
@@ -125,24 +120,23 @@ class ContactAddState extends State<ContactAddScreen> {
     var prevSearchText = searchText;
 
     setState(() {
-      if (searchController.text.isEmpty) {
+      if (_searchController.text.isEmpty) {
         contacts = [];
       }
-      searchText = searchController.text;
+      searchText = _searchController.text;
     });
 
-    if (prevSearchText != searchController.text) {
-      search(searchController.text);
+    if (prevSearchText != _searchController.text) {
+      search(_searchController.text);
     }
   }
 
   void onSearchClear() {
-    searchController.clear();
+    _searchController.clear();
   }
 
   void onContactTap(username) async {
     var result = await addContact(username);
-    getOpenKey(username);
 
     var timeOut = const Duration(seconds: 1);
     new Timer(timeOut, () {
@@ -160,8 +154,8 @@ class ContactAddState extends State<ContactAddScreen> {
 
   @override
   void dispose() {
-    searchController.removeListener(onSearchChange);
-    searchController.dispose();
+    _searchController.removeListener(onSearchChange);
+    _searchController.dispose();
     websocketSubscription.cancel();
     super.dispose();
   }
@@ -186,7 +180,7 @@ class ContactAddState extends State<ContactAddScreen> {
             SizedBox(height: 15.0),
             TextField(
               key: Key('search'),
-              controller: searchController,
+              controller: _searchController,
               autocorrect: false,
               decoration: InputDecoration(
                 filled: true,
@@ -207,7 +201,7 @@ class ContactAddState extends State<ContactAddScreen> {
               ],
             ),
             Expanded(
-                child: contacts.length != 0 || searchController.text.isNotEmpty
+                child: contacts.length != 0 || _searchController.text.isNotEmpty
                     ? ListView.builder(
                         itemCount: contacts.length,
                         itemBuilder: (context, index) {
@@ -216,7 +210,7 @@ class ContactAddState extends State<ContactAddScreen> {
                           String inContacts = '';
 
                           var inDbContacts = dbContacts.firstWhere((item) {
-                            return item['username'] == username;
+                            return item.username == username;
                           }, orElse: () {});
                           if (inDbContacts != null) {
                             inContacts = 'in contacts';
