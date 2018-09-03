@@ -43,7 +43,7 @@ class ChatModel {
       DateTime dateCreate,
       DateTime dateUpdate}) {
     DateTime dateTimeNow = DateTime.now();
-    if (members != null) {
+    if (members != null && members.isNotEmpty) {
       members.sort();
     }
     this.id = id ?? Db.generateId();
@@ -51,7 +51,7 @@ class ChatModel {
     this.owner = owner ?? '';
     this.members = members ?? [];
     this.membersHash =
-        ''; // membersHash ?? HashHelper.hexSha256(this.members.toString());
+        membersHash ?? HashHelper.hexSha256(this.members.toString());
     this.type = type ?? '';
     this.avatar = avatar ?? '';
     this.lastMessage = lastMessage ?? {};
@@ -67,33 +67,33 @@ class ChatModel {
     this.dateUpdate = dateUpdate ?? dateTimeNow;
   }
 
-  factory ChatModel.fromJson(Map<String, dynamic> json) {
+  factory ChatModel.fromJson(Map<String, dynamic> data) {
     return ChatModel(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      owner: json['owner'] as String,
+      id: data['id'] as String,
+      name: data['name'] as String,
+      owner: data['owner'] as String,
       members:
-          json['members'] != null ? List<String>.from(json['members']) : [],
-      membersHash: json['membersHash'] as String,
-      type: json['type'] as String,
-      avatar: json['avatar'] as String,
-      lastMessage: json['lastMessage'] as Map<String, dynamic> ?? {},
-      contacts: json['contacts'] != null
-          ? List<Map<String, dynamic>>.from(json['contacts'])
+          data['members'] != null ? List<String>.from(data['members']) : [],
+      membersHash: data['membersHash'] as String,
+      type: data['type'] as String,
+      avatar: data['avatar'] as String,
+      lastMessage: data['lastMessage'] as Map<String, dynamic> ?? {},
+      contacts: data['contacts'] != null
+          ? List<Map<String, dynamic>>.from(data['contacts'])
           : [],
-      unreadCount: json['unreadCount'] as int,
-      sort: json['sort'] as int,
-      pin: json['pin'] as int,
-      isMuted: json['isMuted'] as bool,
-      isDeleted: json['isDeleted'] as bool,
-      salt: json['salt'] as String,
+      unreadCount: data['unreadCount'] as int,
+      sort: data['sort'] as int,
+      pin: data['pin'] as int,
+      isMuted: data['isMuted'] as bool,
+      isDeleted: data['isDeleted'] as bool,
+      salt: data['salt'] as String,
       dateSend:
-          json['dateSend'] != null ? DateTime.parse(json['dateSend']) : null,
-      dateCreate: json['dateCreate'] != null
-          ? DateTime.parse(json['dateCreate'])
+          data['dateSend'] != null ? DateTime.parse(data['dateSend']) : null,
+      dateCreate: data['dateCreate'] != null
+          ? DateTime.parse(data['dateCreate'])
           : null,
-      dateUpdate: json['dateUpdate'] != null
-          ? DateTime.parse(json['dateUpdate'])
+      dateUpdate: data['dateUpdate'] != null
+          ? DateTime.parse(data['dateUpdate'])
           : null,
     );
   }
@@ -114,6 +114,65 @@ class ChatModel {
       'pin': pin,
       'isMuted': isMuted,
       'isDeleted': isDeleted,
+      'salt': salt,
+      'dateSend': dateSend != null ? dateSend.toUtc().toIso8601String() : '',
+      'dateCreate':
+          dateCreate != null ? dateCreate.toUtc().toIso8601String() : '',
+      'dateUpdate':
+          dateUpdate != null ? dateUpdate.toUtc().toIso8601String() : '',
+    };
+  }
+
+  factory ChatModel.fromSqlite(Map<String, dynamic> data) {
+    return ChatModel(
+      id: data['id'] as String,
+      name: data['name'] as String,
+      owner: data['owner'] as String,
+      members: data['members'] != null && data['members'].isNotEmpty
+          ? List<String>.from(json.decode(data['members']))
+          : [],
+      membersHash: data['membersHash'] as String,
+      type: data['type'] as String,
+      avatar: data['avatar'] as String,
+      lastMessage: data['lastMessage'] != null && data['lastMessage'].isNotEmpty
+          ? json.decode(data['lastMessage']) as Map<String, dynamic>
+          : {},
+      contacts: data['contacts'] != null && data['contacts'].isNotEmpty
+          ? List<Map<String, dynamic>>.from(json.decode(data['contacts']))
+          : [],
+      unreadCount: data['unreadCount'] as int,
+      sort: data['sort'] as int,
+      pin: data['pin'] as int,
+      isMuted: (data['isMuted'] as int) == 1 ? true : false,
+      isDeleted: (data['isDeleted'] as int) == 1 ? true : false,
+      salt: data['salt'] as String,
+      dateSend:
+          data['dateSend'] != null ? DateTime.parse(data['dateSend']) : null,
+      dateCreate: data['dateCreate'] != null
+          ? DateTime.parse(data['dateCreate'])
+          : null,
+      dateUpdate: data['dateUpdate'] != null
+          ? DateTime.parse(data['dateUpdate'])
+          : null,
+    );
+  }
+
+  Map<String, dynamic> toSqlite() {
+    return {
+      'id': id,
+      'name': name,
+      'owner': owner,
+      'members': json.encode(members),
+      'membersHash': membersHash,
+      'type': type,
+      'avatar': avatar,
+      'lastMessage': json.encode(lastMessage),
+      'contacts': json.encode(contacts),
+      'unreadCount': unreadCount,
+      'sort': sort,
+      'pin': pin,
+      'isMuted': isMuted == true ? 1 : 0,
+      'isDeleted': isDeleted == true ? 1 : 0,
       'salt': salt,
       'dateSend': dateSend != null ? dateSend.toUtc().toIso8601String() : '',
       'dateCreate':

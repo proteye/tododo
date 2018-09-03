@@ -1,12 +1,13 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:tododo/src/models/hashKey.model.dart';
-import 'package:tododo/src/utils/enum.util.dart';
 import 'package:tododo/src/utils/hash.util.dart';
 import 'package:tododo/src/utils/db.util.dart';
 
-Db db = new Db();
+const TABLE_NAME = 'HashKey';
+const COLUMN_ID = 'id';
+
+final Db db = new Db();
 
 class HashKeyService {
   List<HashKeyModel> hashKeys = [];
@@ -20,14 +21,20 @@ class HashKeyService {
 
   HashKeyService._internal();
 
-  Future<void> init() async {
-    var jsonHashKeys = await db.getByKey(Enum.DB['hashKeys']) ?? '[]';
-    jsonHashKeys = json.decode(jsonHashKeys);
+  Future<List<HashKeyModel>> loadAll({bool force = false}) async {
+    if (force != true && hashKeys.length > 0) {
+      return hashKeys;
+    }
+
+    hashKeys = [];
+    var jsonHashKeys = await db.getByQuery(TABLE_NAME, '');
 
     for (var jsonHashKey in jsonHashKeys) {
       HashKeyModel hashKey = HashKeyModel.fromJson(jsonHashKey);
       hashKeys.add(hashKey);
     }
+
+    return hashKeys;
   }
 
   static String generateHash(DateTime encryptTime, String data, String salt) {
@@ -47,12 +54,9 @@ class HashKeyService {
 
   Future<HashKeyModel> add(HashKeyModel hashKey) async {
     try {
-      hashKeys.clear(); // TODO: remove after tests
       hashKeys.add(hashKey);
-      var jsonHashKeys = json.encode(hashKeys);
-      await db.setByKey(Enum.DB['hashKeys'], jsonHashKeys);
-      // var test = await db.getByKey(Enum.DB['hashKeys']) ?? '[]';
-      // print('hashKey added: ${json.decode(test).length}');
+      var result = await db.insert(TABLE_NAME, hashKey.toJson());
+      print('hashKey created: $result');
     } catch (e) {
       print('HashKeysService.add error: ${e.toString()}');
       return null;

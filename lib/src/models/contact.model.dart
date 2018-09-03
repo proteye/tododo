@@ -11,7 +11,7 @@ class ContactModel {
   String bio;
   String avatar;
   String sound;
-  bool notification;
+  bool isNotify;
   bool isBlocked;
   String settings;
   String publicKey;
@@ -29,7 +29,7 @@ class ContactModel {
       String bio,
       String avatar,
       String sound,
-      bool notification,
+      bool isNotify,
       bool isBlocked,
       String settings,
       String publicKey,
@@ -46,7 +46,7 @@ class ContactModel {
     this.bio = bio ?? '';
     this.avatar = avatar ?? '';
     this.sound = sound ?? '';
-    this.notification = notification ?? true;
+    this.isNotify = isNotify ?? true;
     this.isBlocked = isBlocked ?? false;
     this.settings = settings ?? '';
     this.publicKey = publicKey ?? '';
@@ -54,26 +54,28 @@ class ContactModel {
     this.dateUpdate = dateUpdate ?? dateTimeNow;
   }
 
-  factory ContactModel.fromJson(Map<String, dynamic> json) {
+  factory ContactModel.fromJson(Map<String, dynamic> data) {
     return ContactModel(
-      username: json['username'] as String,
-      nickname: json['nickname'] as String,
-      deviceId: json['deviceId'] as String,
-      groups: json['groups'] as List<String>,
-      phones: json['phones'] as List<String>,
-      firstName: json['firstName'] as String,
-      secondName: json['secondName'] as String,
-      bio: json['bio'] as String,
-      avatar: json['avatar'] as String,
-      sound: json['sound'] as String,
-      notification: json['notification'] as bool,
-      isBlocked: json['isBlocked'] as bool,
-      settings: json['settings'] as String,
-      publicKey: json['publicKey'] as String,
-      dateCreate:
-          json['dateCreate'] ? DateTime.parse(json['dateCreate']) : null,
-      dateUpdate:
-          json['dateUpdate'] ? DateTime.parse(json['dateUpdate']) : null,
+      username: data['username'] as String,
+      nickname: data['nickname'] as String,
+      deviceId: data['deviceId'] as String,
+      groups: data['groups'] as List<String>,
+      phones: data['phones'] as List<String>,
+      firstName: data['firstName'] as String,
+      secondName: data['secondName'] as String,
+      bio: data['bio'] as String,
+      avatar: data['avatar'] as String,
+      sound: data['sound'] as String,
+      isNotify: data['isNotify'] as bool,
+      isBlocked: data['isBlocked'] as bool,
+      settings: data['settings'] as String,
+      publicKey: data['publicKey'] as String,
+      dateCreate: data['dateCreate'] != null
+          ? DateTime.parse(data['dateCreate'])
+          : null,
+      dateUpdate: data['dateUpdate'] != null
+          ? DateTime.parse(data['dateUpdate'])
+          : null,
     );
   }
 
@@ -89,8 +91,56 @@ class ContactModel {
       'bio': bio,
       'avatar': avatar,
       'sound': sound,
-      'notification': notification,
+      'isNotify': isNotify,
       'isBlocked': isBlocked,
+      'settings': settings,
+      'publicKey': publicKey,
+      'dateCreate':
+          dateCreate != null ? dateCreate.toUtc().toIso8601String() : '',
+      'dateUpdate':
+          dateUpdate != null ? dateUpdate.toUtc().toIso8601String() : '',
+    };
+  }
+
+  factory ContactModel.fromSqlite(Map<String, dynamic> data) {
+    return ContactModel(
+      username: data['username'] as String,
+      nickname: data['nickname'] as String,
+      deviceId: data['deviceId'] as String,
+      groups: List<String>.from(json.decode(data['groups'])),
+      phones: List<String>.from(json.decode(data['phones'])),
+      firstName: data['firstName'] as String,
+      secondName: data['secondName'] as String,
+      bio: data['bio'] as String,
+      avatar: data['avatar'] as String,
+      sound: data['sound'] as String,
+      isNotify: (data['isNotify'] as int) == 1 ? true : false,
+      isBlocked: (data['isBlocked'] as int) == 1 ? true : false,
+      settings: data['settings'] as String,
+      publicKey: data['publicKey'] as String,
+      dateCreate: data['dateCreate'] != null
+          ? DateTime.parse(data['dateCreate'])
+          : null,
+      dateUpdate: data['dateUpdate'] != null
+          ? DateTime.parse(data['dateUpdate'])
+          : null,
+    );
+  }
+
+  Map<String, dynamic> toSqlite() {
+    return {
+      'username': username,
+      'nickname': nickname,
+      'deviceId': deviceId,
+      'groups': json.encode(groups),
+      'phones': json.encode(phones),
+      'firstName': firstName,
+      'secondName': secondName,
+      'bio': bio,
+      'avatar': avatar,
+      'sound': sound,
+      'isNotify': isNotify == true ? 1 : 0,
+      'isBlocked': isBlocked == true ? 1 : 0,
       'settings': settings,
       'publicKey': publicKey,
       'dateCreate':

@@ -4,17 +4,19 @@ import 'package:flutter/services.dart';
 
 import 'package:tododo/src/models/account.model.dart';
 import 'package:tododo/src/models/chat.model.dart';
+import 'package:tododo/src/models/contact.model.dart';
 import 'package:tododo/src/models/hashKey.model.dart';
 import 'package:tododo/src/services/account.service.dart';
 import 'package:tododo/src/services/chat.service.dart';
+import 'package:tododo/src/services/contact.service.dart';
 import 'package:tododo/src/services/hashKey.service.dart';
-import 'package:tododo/src/utils/enum.util.dart';
 import 'package:tododo/src/utils/formatter.util.dart';
 import 'package:tododo/src/utils/db.util.dart';
 
 Db db = new Db();
 AccountService accountService = new AccountService();
 ChatService chatService = new ChatService();
+ContactService contactService = new ContactService();
 HashKeyService hashKeyService = new HashKeyService();
 
 class ChatCreateScreen extends StatefulWidget {
@@ -23,41 +25,40 @@ class ChatCreateScreen extends StatefulWidget {
 }
 
 class ChatCreateState extends State<ChatCreateScreen> {
-  final searchController = TextEditingController();
+  final _searchController = TextEditingController();
   final AccountModel account = accountService.account;
 
-  List<Map<String, dynamic>> contacts = [];
-  List<Map<String, dynamic>> filteredContacts = [];
+  List<ContactModel> contacts = [];
+  List<ContactModel> filteredContacts = [];
   List<ChatModel> chats = [];
   ChatModel chat;
   String searchText = '';
 
   void init() async {
-    searchController.addListener(onSearchChange);
-    var _contacts = await db.getByKey(Enum.DB['contacts']) ?? [];
+    _searchController.addListener(onSearchChange);
+    contacts = await contactService.loadAll();
 
     setState(() {
-      contacts = List<Map<String, dynamic>>.from(_contacts);
       filteredContacts = contacts;
     });
   }
 
-  Future<ChatModel> createChat(contact) async {
+  Future<ChatModel> createChat(ContactModel contact) async {
     ChatModel chat;
 
     try {
       chat = ChatModel(
-        name: '@${contact['nickname']}',
+        name: '@${contact.nickname}',
         owner: account.username,
-        members: [account.username, contact['username']],
+        members: [account.username, contact.username],
         type: 'private',
         avatar: '',
-        contacts: [contact],
+        contacts: [contact.toJson()],
       );
-      chatService.create(chat);
+      var result = await chatService.create(chat);
 
       // calculate and add the hashKey
-      if (chat != null) {
+      if (result != null) {
         String hashString = HashKeyService.generateHash(
             chat.dateSend, chat.sendData, chat.salt);
         HashKeyModel hashKey = HashKeyModel(
@@ -78,9 +79,7 @@ class ChatCreateState extends State<ChatCreateScreen> {
     }
 
     setState(() {
-      filteredContacts = contacts
-          .where((item) => item['username'].indexOf(text) >= 0)
-          .toList();
+      filteredContacts = contactService.find(text);
     });
   }
 
@@ -88,19 +87,19 @@ class ChatCreateState extends State<ChatCreateScreen> {
     var prevSearchText = searchText;
 
     setState(() {
-      if (searchController.text.isEmpty) {
+      if (_searchController.text.isEmpty) {
         filteredContacts = contacts;
       }
-      searchText = searchController.text;
+      searchText = _searchController.text;
     });
 
-    if (prevSearchText != searchController.text) {
-      search(searchController.text);
+    if (prevSearchText != _searchController.text) {
+      search(_searchController.text);
     }
   }
 
   void onSearchClear() {
-    searchController.clear();
+    _searchController.clear();
   }
 
   void onContactTap(contact) async {
@@ -116,8 +115,8 @@ class ChatCreateState extends State<ChatCreateScreen> {
 
   @override
   void dispose() {
-    searchController.removeListener(onSearchChange);
-    searchController.dispose();
+    _searchController.removeListener(onSearchChange);
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -141,7 +140,7 @@ class ChatCreateState extends State<ChatCreateScreen> {
             SizedBox(height: 15.0),
             TextField(
               key: Key('search'),
-              controller: searchController,
+              controller: _searchController,
               autocorrect: false,
               decoration: InputDecoration(
                 filled: true,
@@ -177,11 +176,11 @@ class ChatCreateState extends State<ChatCreateScreen> {
                               size: 48.0,
                               color: Colors.blue,
                             ),
-                            title: Text(contact['username'],
+                            title: Text(contact.username,
                                 style: TextStyle(
                                     fontWeight: FontWeight.w700,
                                     fontSize: 16.0)),
-                            subtitle: Text('@${contact['nickname']}',
+                            subtitle: Text('@${contact.nickname}',
                                 style: TextStyle(
                                     fontWeight: FontWeight.w400,
                                     fontSize: 14.0)),

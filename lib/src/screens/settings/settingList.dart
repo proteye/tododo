@@ -19,7 +19,7 @@ class SettingListScreen extends StatefulWidget {
 class SettingListState extends State<SettingListScreen> {
   void init() async {
     await accountService.init();
-    await hashKeyService.init();
+    await hashKeyService.loadAll();
   }
 
   void onLogout() async {

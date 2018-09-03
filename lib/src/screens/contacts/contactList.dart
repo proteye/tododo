@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:tododo/src/utils/enum.util.dart';
+import 'package:tododo/src/models/contact.model.dart';
+import 'package:tododo/src/services/contact.service.dart';
 import 'package:tododo/src/utils/formatter.util.dart';
 import 'package:tododo/src/utils/db.util.dart';
 
 Db db = new Db();
+ContactService contactService = new ContactService();
 
 class ContactListScreen extends StatefulWidget {
   @override
@@ -13,17 +15,17 @@ class ContactListScreen extends StatefulWidget {
 }
 
 class ContactListState extends State<ContactListScreen> {
-  final searchController = TextEditingController();
-  List<Map<String, dynamic>> contacts = [];
-  List<Map<String, dynamic>> filteredContacts = [];
+  final _searchController = TextEditingController();
+
+  List<ContactModel> contacts = [];
+  List<ContactModel> filteredContacts = [];
   String searchText = '';
 
   void init() async {
-    searchController.addListener(onSearchChange);
-    var _contacts = await db.getByKey(Enum.DB['contacts']) ?? [];
+    _searchController.addListener(onSearchChange);
+    contacts = await contactService.loadAll();
 
     setState(() {
-      contacts = List<Map<String, dynamic>>.from(_contacts);
       filteredContacts = contacts;
     });
   }
@@ -34,9 +36,7 @@ class ContactListState extends State<ContactListScreen> {
     }
 
     setState(() {
-      filteredContacts = contacts
-          .where((item) => item['username'].indexOf(text) >= 0)
-          .toList();
+      filteredContacts = contactService.find(text);
     });
   }
 
@@ -44,36 +44,33 @@ class ContactListState extends State<ContactListScreen> {
     var prevSearchText = searchText;
 
     setState(() {
-      if (searchController.text.isEmpty) {
+      if (_searchController.text.isEmpty) {
         filteredContacts = contacts;
       }
-      searchText = searchController.text;
+      searchText = _searchController.text;
     });
 
-    if (prevSearchText != searchController.text) {
-      search(searchController.text);
+    if (prevSearchText != _searchController.text) {
+      search(_searchController.text);
     }
   }
 
   void onSearchClear() {
-    searchController.clear();
+    _searchController.clear();
   }
 
   void onContactAdd() async {
     var result = await Navigator.pushNamed(context, '/contactAdd');
 
     if (result != null) {
-      var _contacts = await db.getByKey(Enum.DB['contacts']) ?? [];
+      contacts = await contactService.loadAll();
       setState(() {
-        contacts = List<Map<String, dynamic>>.from(_contacts);
         filteredContacts = contacts;
       });
     }
   }
 
-  void onContactTap(contact) {
-    print(contact);
-  }
+  void onContactTap(contact) {}
 
   @override
   void initState() {
@@ -83,8 +80,8 @@ class ContactListState extends State<ContactListScreen> {
 
   @override
   void dispose() {
-    searchController.removeListener(onSearchChange);
-    searchController.dispose();
+    _searchController.removeListener(onSearchChange);
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -112,7 +109,7 @@ class ContactListState extends State<ContactListScreen> {
             SizedBox(height: 15.0),
             TextField(
               key: Key('search'),
-              controller: searchController,
+              controller: _searchController,
               autocorrect: false,
               decoration: InputDecoration(
                 filled: true,
@@ -148,11 +145,11 @@ class ContactListState extends State<ContactListScreen> {
                               size: 48.0,
                               color: Colors.blue,
                             ),
-                            title: Text(contact['username'],
+                            title: Text(contact.username,
                                 style: TextStyle(
                                     fontWeight: FontWeight.w700,
                                     fontSize: 16.0)),
-                            subtitle: Text('@${contact['nickname']}',
+                            subtitle: Text('@${contact.nickname}',
                                 style: TextStyle(
                                     fontWeight: FontWeight.w400,
                                     fontSize: 14.0)),

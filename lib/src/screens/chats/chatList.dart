@@ -10,6 +10,7 @@ import 'package:tododo/src/services/account.service.dart';
 import 'package:tododo/src/services/chat.service.dart';
 import 'package:tododo/src/services/hashKey.service.dart';
 import 'package:tododo/src/utils/formatter.util.dart';
+import 'package:tododo/src/utils/helper.util.dart';
 import 'package:tododo/src/utils/websocket.util.dart';
 import 'package:tododo/src/utils/db.util.dart';
 
@@ -26,7 +27,6 @@ class ChatListScreen extends StatefulWidget {
 
 class ChatListState extends State<ChatListScreen> {
   final _searchController = TextEditingController();
-  final AccountModel account = accountService.account;
 
   StreamSubscription<dynamic> websocketSubscription;
   List<ChatModel> chats = [];
@@ -35,11 +35,9 @@ class ChatListState extends State<ChatListScreen> {
   void init() async {
     websocketSubscription = websocket.bstream.listen(onWebsocketData);
     _searchController.addListener(onSearchChange);
-    await chatService.init();
+    chats = await chatService.loadAll();
 
-    setState(() {
-      chats = chatService.chats;
-    });
+    setState(() {});
   }
 
   void search(String text) async {
@@ -58,7 +56,8 @@ class ChatListState extends State<ChatListScreen> {
     try {
       Map<String, dynamic> data = jsonData['data'];
       String payload = data['payload'];
-      chat = await chatService.receiveCreate(payload, account.privateKey);
+      chat = await chatService.receiveCreate(
+          payload, accountService.account.privateKey);
       setState(() {
         chats = chatService.chats;
       });
@@ -185,10 +184,18 @@ class ChatListState extends State<ChatListScreen> {
                         itemCount: chats.length,
                         itemBuilder: (context, index) {
                           var chat = chats[index];
-                          var subTitle = chat.lastMessage != null &&
-                                  chat.lastMessage.isNotEmpty
-                              ? '${chat.lastMessage['username']}: ${chat.lastMessage['text']}'
-                              : 'You have no messages yet';
+                          var subTitle = 'You have no messages yet';
+                          if (chat.lastMessage != null &&
+                              chat.lastMessage.isNotEmpty) {
+                            String nickname = accountService.account != null &&
+                                    accountService.account.username ==
+                                        chat.lastMessage['username']
+                                ? ''
+                                : Helper.getAtNickname(
+                                        chat.lastMessage['username']) +
+                                    ': ';
+                            subTitle = '${nickname}${chat.lastMessage['text']}';
+                          }
 
                           return ListTile(
                             onTap: () {
