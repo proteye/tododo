@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import "package:pointycastle/export.dart";
 import "package:asn1lib/asn1lib.dart";
 
+import "package:tododo/src/utils/aes.util.dart";
 import "package:tododo/src/utils/convert.util.dart";
 import "package:tododo/src/utils/lib/my_rsa_key_generator.dart";
 
@@ -44,6 +45,12 @@ class RsaHelper {
 
     return new String.fromCharCodes(decrypted);
   }
+
+  // Create random encrypted sessionKey with RSA and encrypt the message with AES-256
+  static String hybridEncrypt(String plaintext, RSAPublicKey publicKey) {}
+
+  // Decrypt the sessionKey with RSA and decrypt the message with AES-256
+  static String hybridDecrypt(String plaintext, RSAPrivateKey privateKey) {}
 
   static RSAPublicKey parsePublicKeyFromPem(String pemString) {
     List<int> publicKeyDER = decodePEM(pemString);

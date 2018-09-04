@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:tododo/src/models/account.model.dart';
 import 'package:tododo/src/models/chat.model.dart';
 import 'package:tododo/src/models/hashKey.model.dart';
 import 'package:tododo/src/services/account.service.dart';
