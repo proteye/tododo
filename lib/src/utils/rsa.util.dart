@@ -8,6 +8,8 @@ import "package:tododo/src/utils/aes.util.dart";
 import "package:tododo/src/utils/convert.util.dart";
 import "package:tododo/src/utils/lib/my_rsa_key_generator.dart";
 
+const KEY_SIZE = 32; // 32 byte key for AES-256
+
 class RsaHelper {
   static AsymmetricKeyPair<RSAPublicKey, RSAPrivateKey> generateKeyPair() {
     var keyParams =
@@ -47,10 +49,29 @@ class RsaHelper {
   }
 
   // Create random encrypted sessionKey with RSA and encrypt the message with AES-256
-  static String hybridEncrypt(String plaintext, RSAPublicKey publicKey) {}
+  static String hybridEncrypt(String plaintext, RSAPublicKey publicKey) {
+    var cipher = new RSAEngine()
+      ..init(true, new PublicKeyParameter<RSAPublicKey>(publicKey));
+    Uint8List sessionKey = _generateSessionKey();
+    Uint8List textBytes = createUint8ListFromString(plaintext);
+    Uint8List cipherBytes = AesHelper.encryptBytes(sessionKey, textBytes);
+    Uint8List encryptedSessionKey = cipher.process(sessionKey);
+
+    return encodeCipherToPem(encryptedSessionKey, cipherBytes);
+  }
 
   // Decrypt the sessionKey with RSA and decrypt the message with AES-256
-  static String hybridDecrypt(String plaintext, RSAPrivateKey privateKey) {}
+  static String hybridDecrypt(String plaintext, RSAPrivateKey privateKey) {
+    var cipher = new RSAEngine()
+      ..init(false, new PrivateKeyParameter<RSAPrivateKey>(privateKey));
+    var decodedCipher = decodeCipherFromPem(plaintext);
+    Uint8List encryptedSessionKey = decodedCipher[0];
+    Uint8List cipherBytes = decodedCipher[1];
+    Uint8List sessionKey = cipher.process(encryptedSessionKey);
+    Uint8List textBytes = AesHelper.decryptBytes(sessionKey, cipherBytes);
+
+    return String.fromCharCodes(textBytes);
+  }
 
   static RSAPublicKey parsePublicKeyFromPem(String pemString) {
     List<int> publicKeyDER = decodePEM(pemString);
@@ -165,5 +186,42 @@ class RsaHelper {
     var dataBase64 = base64.encode(topLevelSeq.encodedBytes);
 
     return """-----BEGIN PRIVATE KEY-----\r\n$dataBase64\r\n-----END PRIVATE KEY-----""";
+  }
+
+  static String encodeCipherToPem(
+      Uint8List encryptedSessionKey, Uint8List cipherText) {
+    var seq = new ASN1Sequence();
+    var sessionKeyAsn1Obj = new ASN1BitString(encryptedSessionKey);
+    var cipherTextAsn1Obj = new ASN1BitString(cipherText);
+    seq.add(sessionKeyAsn1Obj);
+    seq.add(cipherTextAsn1Obj);
+
+    var dataBase64 = base64.encode(seq.encodedBytes);
+
+    return """-----BEGIN MESSAGE-----\r\n$dataBase64\r\n-----END MESSAGE-----""";
+  }
+
+  static List<Uint8List> decodeCipherFromPem(String cipherPemString) {
+    List<int> cipherDER = decodePEM(cipherPemString);
+    var asn1Parser = new ASN1Parser(cipherDER);
+    var seq = asn1Parser.nextObject() as ASN1Sequence;
+    var sessionKey = seq.elements[0] as ASN1BitString;
+    var cipherText = seq.elements[1] as ASN1BitString;
+
+    return [sessionKey.contentBytes(), cipherText.contentBytes()];
+  }
+
+  static Uint8List _generateSessionKey({int size = KEY_SIZE}) {
+    var secureRandom = new FortunaRandom();
+    var random = new Random.secure();
+
+    List<int> seeds = [];
+    for (int i = 0; i < size; i++) {
+      seeds.add(random.nextInt(255));
+    }
+    var keyParam = new KeyParameter(new Uint8List.fromList(seeds));
+    secureRandom.seed(keyParam);
+
+    return secureRandom.nextBytes(size);
   }
 }
