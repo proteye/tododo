@@ -69,7 +69,7 @@ class ChatService {
       chats.add(chat);
       var result = await db.insert(TABLE_NAME, chat.toSqlite());
       print('chat created: $result');
-      _sendCreateChat(
+      _sendCreatedChat(
         chat.contacts[0]['username'],
         chat.contacts[0]['publicKey'],
         chat,
@@ -163,7 +163,7 @@ class ChatService {
     return chat;
   }
 
-  void _sendCreateChat(String username, String publicKey, ChatModel chat,
+  void _sendCreatedChat(String username, String publicKey, ChatModel chat,
       {DateTime encryptTime}) {
     var _encryptTime = encryptTime != null
         ? encryptTime.toUtc().toIso8601String()
