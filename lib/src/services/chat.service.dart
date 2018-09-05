@@ -5,6 +5,7 @@ import 'package:tododo/src/models/chat.model.dart';
 import 'package:tododo/src/models/hashKey.model.dart';
 import 'package:tododo/src/services/hashKey.service.dart';
 import 'package:tododo/src/services/contact.service.dart';
+import 'package:tododo/src/services/chatMessage.service.dart';
 import 'package:tododo/src/utils/helper.util.dart';
 import 'package:tododo/src/utils/rsa.util.dart';
 import 'package:tododo/src/utils/websocket.util.dart';
@@ -18,6 +19,7 @@ final Db db = new Db();
 final Websocket websocket = new Websocket();
 final HashKeyService hashKeyService = new HashKeyService();
 final ContactService contactService = new ContactService();
+final ChatMessageService chatMessageService = new ChatMessageService();
 final Map<String, String> meta = Config.MESSAGE_META;
 
 class ChatService {
@@ -159,6 +161,11 @@ class ChatService {
     try {
       chats = [];
       int result = await db.deleteAll(TABLE_NAME);
+
+      // TODO - remove
+      await chatMessageService.deleteAll();
+      await hashKeyService.deleteAll();
+
       print('all chats deleted: $result');
     } catch (e) {
       print('ChatService.deleteAll error: ${e.toString()}');

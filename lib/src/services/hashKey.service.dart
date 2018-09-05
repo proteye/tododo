@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:tododo/src/models/hashKey.model.dart';
 import 'package:tododo/src/utils/hash.util.dart';
+import 'package:tododo/src/utils/date.util.dart';
 import 'package:tododo/src/utils/db.util.dart';
 
 const TABLE_NAME = 'HashKey';
@@ -72,10 +73,27 @@ class HashKeyService {
       if (dateSend == null || dateSend.isEmpty) {
         return null;
       }
+
       DateTime _dateSend = DateTime.parse(dateSend);
-      hashKey = hashKeys.singleWhere((item) =>
-          item.dateSend.millisecondsSinceEpoch ==
-          _dateSend.millisecondsSinceEpoch);
+      hashKey = hashKeys.singleWhere(
+          (item) =>
+              item.dateSend.millisecondsSinceEpoch ==
+              _dateSend.millisecondsSinceEpoch,
+          orElse: () => null);
+
+      if (hashKey == null) {
+        Map<String, dynamic> jsonHashKey = await db.getById(
+          TABLE_NAME,
+          'dateSendMs',
+          _dateSend.toUtc().toIso8601String(),
+        );
+
+        if (jsonHashKey == null) {
+          throw new ArgumentError('hashKey is not found');
+        }
+
+        hashKey = HashKeyModel.fromJson(jsonHashKey);
+      }
     } catch (e) {
       print('HashKeysService.getByDate error: ${e.toString()}');
       return null;
@@ -86,10 +104,8 @@ class HashKeyService {
 
   Future<List<dynamic>> getByChatId(String chatId,
       {bool inJson = false}) async {
-    List<HashKeyModel> _hashKeys = [];
-
     if (chatId == null || chatId.isEmpty) {
-      return null;
+      return [];
     }
 
     List<Map<String, dynamic>> jsonHashKeys = await db.getByParams(
@@ -102,6 +118,8 @@ class HashKeyService {
     if (inJson == true) {
       return jsonHashKeys;
     }
+
+    List<HashKeyModel> _hashKeys = [];
 
     for (var jsonHashKey in jsonHashKeys) {
       HashKeyModel hashKey = HashKeyModel.fromJson(jsonHashKey);
