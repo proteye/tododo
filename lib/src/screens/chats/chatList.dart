@@ -55,7 +55,7 @@ class ChatListState extends State<ChatListScreen> {
     try {
       Map<String, dynamic> data = jsonData['data'];
       String payload = data['payload'];
-      chat = await chatService.receiveCreate(
+      chat = await chatService.receiveChat(
           payload, accountService.account.privateKey);
       setState(() {
         chats = chatService.chats;
@@ -112,7 +112,11 @@ class ChatListState extends State<ChatListScreen> {
   void onChatCreate() async {
     var result = await Navigator.pushNamed(context, '/chatCreate');
 
-    if (result != null) {}
+    if (result != null) {
+      setState(() {
+        chats = chatService.chats;
+      });
+    }
   }
 
   void onChatTap(chat) {

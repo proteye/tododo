@@ -192,10 +192,11 @@ class ChatMessageModel {
     Map<String, dynamic> _sendData = {
       'id': this.id,
       'chatId': this.chatId,
-      'type': type,
+      'type': this.type,
       'username': this.username,
       'text': this.text,
       'filename': filename,
+      'fileUrl': fileUrl,
       'quote': this.quote,
       'salt': this.salt,
       'dateSend':

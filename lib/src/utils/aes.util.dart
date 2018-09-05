@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 import "package:pointycastle/export.dart";
 
@@ -86,7 +87,7 @@ class AesHelper {
       ..setAll(0, iv)
       ..setAll(iv.length, cipherBytes);
 
-    return formatBytesAsHexString(cipherIvBytes);
+    return base64.encode(cipherIvBytes);
   }
 
   static String decrypt(String password, String ciphertext,
@@ -95,7 +96,7 @@ class AesHelper {
     KeyParameter keyParam = new KeyParameter(derivedKey);
     BlockCipher aes = new AESFastEngine();
 
-    Uint8List cipherIvBytes = createUint8ListFromHexString(ciphertext);
+    Uint8List cipherIvBytes = base64.decode(ciphertext);
     Uint8List iv = new Uint8List(aes.blockSize)
       ..setRange(0, aes.blockSize, cipherIvBytes);
 

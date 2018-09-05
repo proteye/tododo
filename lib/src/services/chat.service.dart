@@ -2,6 +2,9 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:tododo/src/models/chat.model.dart';
+import 'package:tododo/src/models/hashKey.model.dart';
+import 'package:tododo/src/services/hashKey.service.dart';
+import 'package:tododo/src/services/contact.service.dart';
 import 'package:tododo/src/utils/helper.util.dart';
 import 'package:tododo/src/utils/rsa.util.dart';
 import 'package:tododo/src/utils/websocket.util.dart';
@@ -13,6 +16,8 @@ const COLUMN_ID = 'id';
 
 final Db db = new Db();
 final Websocket websocket = new Websocket();
+final HashKeyService hashKeyService = new HashKeyService();
+final ContactService contactService = new ContactService();
 final Map<String, String> meta = Config.MESSAGE_META;
 
 class ChatService {
@@ -60,15 +65,26 @@ class ChatService {
 
   Future<ChatModel> create(ChatModel chat) async {
     try {
+      // don't create new chat when exists
       int index =
           chats.indexWhere((item) => item.membersHash == chat.membersHash);
       if (index >= 0) {
         return null;
       }
 
+      // add chat to cache and db
       chats.add(chat);
       var result = await db.insert(TABLE_NAME, chat.toSqlite());
       print('chat created: $result');
+
+      // generate hashKey from current chat
+      String hashString =
+          HashKeyService.generateHash(chat.dateSend, chat.sendData, chat.salt);
+      HashKeyModel nextHashKey = HashKeyModel(
+          chatId: chat.id, hashKey: hashString, dateSend: chat.dateSend);
+      hashKeyService.add(nextHashKey);
+
+      // encrypt and send chat to opponent via websocket
       _sendCreatedChat(
         chat.contacts[0]['username'],
         chat.contacts[0]['publicKey'],
@@ -139,19 +155,33 @@ class ChatService {
     return true;
   }
 
+  Future<bool> deleteAll() async {
+    try {
+      chats = [];
+      int result = await db.deleteAll(TABLE_NAME);
+      print('all chats deleted: $result');
+    } catch (e) {
+      print('ChatService.deleteAll error: ${e.toString()}');
+      return null;
+    }
+
+    return true;
+  }
+
   List<ChatModel> find(String text) {
     return chats.where((item) => item.name.indexOf(text) >= 0).toList();
   }
 
-  Future<ChatModel> receiveCreate(String payload, String privateKey) async {
+  Future<ChatModel> receiveChat(String payload, String privateKey) async {
     ChatModel chat;
 
     try {
       var _privateKey = RsaHelper.parsePrivateKeyFromPem(privateKey);
-      var _decrypted = RsaHelper.decrypt(payload, _privateKey);
-      chat = ChatModel.fromSqlite(json.decode(_decrypted));
+      var _decrypted = RsaHelper.hybridDecrypt(payload, _privateKey);
+      chat = ChatModel.fromJson(json.decode(_decrypted));
       chat.name = Helper.getAtNickname(chat.owner);
-      chat.contacts = []; // TODO - add contact
+      var contact = await contactService.loadByUsername(chat.owner);
+      chat.contacts = contact != null ? [contact.toJson()] : [];
       chats.add(chat);
       var result = await db.insert(TABLE_NAME, chat.toSqlite());
       print('chat received and created: $result');
@@ -173,11 +203,11 @@ class ChatService {
 
     try {
       var _publicKey = RsaHelper.parsePublicKeyFromPem(publicKey);
-      var _encrypted = RsaHelper.encrypt(chat.sendData, _publicKey);
+      var _encrypted = RsaHelper.hybridEncrypt(chat.sendData, _publicKey);
       var data = json.encode({
         'type': 'client_message',
         'action': 'create_chat',
-        'data': {'meta': _meta, 'files': {}, 'payload': _encrypted},
+        'data': {'meta': _meta, 'payload': _encrypted},
         'to': [username],
         'encrypt_time': _encryptTime,
       });
