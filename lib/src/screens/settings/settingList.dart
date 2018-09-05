@@ -2,14 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:tododo/src/services/account.service.dart';
-import 'package:tododo/src/services/hashKey.service.dart';
 import 'package:tododo/src/utils/websocket.util.dart';
 import 'package:tododo/src/utils/db.util.dart';
 
 Websocket websocket = new Websocket();
 Db db = new Db();
 AccountService accountService = new AccountService();
-HashKeyService hashKeyService = new HashKeyService();
 
 class SettingListScreen extends StatefulWidget {
   @override
@@ -19,7 +17,6 @@ class SettingListScreen extends StatefulWidget {
 class SettingListState extends State<SettingListScreen> {
   void init() async {
     await accountService.init();
-    await hashKeyService.loadAll();
   }
 
   void onLogout() async {

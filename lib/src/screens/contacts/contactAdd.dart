@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:tododo/src/models/contact.model.dart';
+import 'package:tododo/src/services/account.service.dart';
 import 'package:tododo/src/services/contact.service.dart';
 import 'package:tododo/src/utils/formatter.util.dart';
 import 'package:tododo/src/utils/helper.util.dart';
@@ -12,6 +13,7 @@ import 'package:tododo/src/utils/db.util.dart';
 
 Db db = new Db();
 Websocket websocket = new Websocket();
+AccountService accountService = new AccountService();
 ContactService contactService = new ContactService();
 
 class ContactAddScreen extends StatefulWidget {
@@ -52,8 +54,11 @@ class ContactAddState extends State<ContactAddScreen> {
     var encryptTimeResult = DateTime.parse(jsonData['encrypt_time']);
     if (encryptTime.millisecondsSinceEpoch ==
         encryptTimeResult.millisecondsSinceEpoch) {
+      List<String> dataList = List<String>.from(jsonData['data']);
       setState(() {
-        contacts = List<String>.from(jsonData['data']);
+        contacts = dataList
+            .where((item) => item != accountService.account.username)
+            .toList();
       });
     }
   }

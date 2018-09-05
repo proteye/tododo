@@ -10,7 +10,7 @@ const TABLES_CREATE_QUERIES = [
   'CREATE TABLE Chat (id TEXT PRIMARY KEY, name TEXT, owner TEXT, members TEXT, membersHash TEXT, type TEXT, avatar TEXT, lastMessage TEXT, contacts TEXT, unreadCount INTEGER, sort INTEGER, pin INTEGER, isMuted INTEGER, isDeleted INTEGER, salt TEXT, dateSend TEXT, dateCreate TEXT, dateUpdate TEXT);',
   'CREATE TABLE ChatMessage (id TEXT PRIMARY KEY, chatId TEXT, type TEXT, username TEXT, deviceId TEXT, text TEXT, filename TEXT, fileUrl TEXT, contact TEXT, quote TEXT, status TEXT, isOwn INTEGER, isFavorite INTEGER, salt TEXT, dateSend TEXT, dateCreate TEXT, dateUpdate TEXT);',
   'CREATE TABLE Contact (username TEXT PRIMARY KEY, nickname TEXT, deviceId TEXT, groups TEXT, phones TEXT, firstName TEXT, secondName TEXT, bio TEXT, avatar TEXT, sound TEXT, isNotify INTEGER, isBlocked INTEGER, settings TEXT, publicKey TEXT, dateCreate TEXT, dateUpdate TEXT);',
-  'CREATE TABLE HashKey (id INTEGER PRIMARY KEY AUTOINCREMENT, chatId TEXT, messageId TEXT, hashKey TEXT, dateSend TEXT);',
+  'CREATE TABLE HashKey (id INTEGER PRIMARY KEY AUTOINCREMENT, chatId TEXT, messageId TEXT, hashKey TEXT, dateSend TEXT, dateSendMs TEXT);',
 ];
 
 const DEFAULT_LIMIT = 1000;

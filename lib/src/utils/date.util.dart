@@ -30,3 +30,13 @@ String dayOfWeek(int weekday) {
 String monthOfYear(int month) {
   return MONTHS[month];
 }
+
+String dateToIso8601String(DateTime date, {bool withMicroseconds = false}) {
+  String dateString = date.toUtc().toIso8601String();
+
+  if (withMicroseconds) {
+    return dateString;
+  }
+
+  return dateString.replaceRange(dateString.length - 4, null, 'Z');
+}
