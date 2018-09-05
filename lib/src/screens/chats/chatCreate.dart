@@ -12,7 +12,6 @@ import 'package:tododo/src/services/contact.service.dart';
 import 'package:tododo/src/services/hashKey.service.dart';
 import 'package:tododo/src/utils/formatter.util.dart';
 import 'package:tododo/src/utils/db.util.dart';
-import 'package:tododo/src/utils/rsa.util.dart';
 
 Db db = new Db();
 AccountService accountService = new AccountService();
