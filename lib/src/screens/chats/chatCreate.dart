@@ -5,11 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:tododo/src/models/account.model.dart';
 import 'package:tododo/src/models/chat.model.dart';
 import 'package:tododo/src/models/contact.model.dart';
-import 'package:tododo/src/models/hashKey.model.dart';
 import 'package:tododo/src/services/account.service.dart';
 import 'package:tododo/src/services/chat.service.dart';
 import 'package:tododo/src/services/contact.service.dart';
-import 'package:tododo/src/services/hashKey.service.dart';
 import 'package:tododo/src/utils/formatter.util.dart';
 import 'package:tododo/src/utils/db.util.dart';
 
@@ -17,7 +15,6 @@ Db db = new Db();
 AccountService accountService = new AccountService();
 ChatService chatService = new ChatService();
 ContactService contactService = new ContactService();
-HashKeyService hashKeyService = new HashKeyService();
 
 class ChatCreateScreen extends StatefulWidget {
   @override
@@ -35,6 +32,7 @@ class ChatCreateState extends State<ChatCreateScreen> {
   String searchText = '';
 
   void init() async {
+    // chatService.deleteAll();
     _searchController.addListener(onSearchChange);
     contacts = await contactService.loadAll();
 
@@ -55,16 +53,7 @@ class ChatCreateState extends State<ChatCreateScreen> {
         avatar: '',
         contacts: [contact.toJson()],
       );
-      var result = await chatService.create(chat);
-
-      // calculate and add the hashKey
-      if (result != null) {
-        String hashString = HashKeyService.generateHash(
-            chat.dateSend, chat.sendData, chat.salt);
-        HashKeyModel hashKey = HashKeyModel(
-            chatId: chat.id, hashKey: hashString, dateSend: chat.dateSend);
-        hashKeyService.add(hashKey);
-      }
+      await chatService.create(chat);
     } catch (e) {
       print('ChatCreateState.createChat error: ${e.toString()}');
       return null;

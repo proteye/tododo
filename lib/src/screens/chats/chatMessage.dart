@@ -7,11 +7,9 @@ import 'package:flutter/scheduler.dart';
 import 'package:tododo/src/models/account.model.dart';
 import 'package:tododo/src/models/chat.model.dart';
 import 'package:tododo/src/models/chatMessage.model.dart';
-// import 'package:tododo/src/models/hashKey.model.dart';
 import 'package:tododo/src/services/account.service.dart';
 import 'package:tododo/src/services/chat.service.dart';
 import 'package:tododo/src/services/chatMessage.service.dart';
-import 'package:tododo/src/services/hashKey.service.dart';
 import 'package:tododo/src/utils/enum.util.dart';
 import 'package:tododo/src/utils/formatter.util.dart';
 import 'package:tododo/src/utils/websocket.util.dart';
@@ -22,7 +20,6 @@ Websocket websocket = new Websocket();
 AccountService accountService = new AccountService();
 ChatService chatService = new ChatService();
 ChatMessageService chatMessageService = new ChatMessageService();
-HashKeyService hashKeyService = new HashKeyService();
 
 class ChatMessageScreen extends StatefulWidget {
   final String chatId;
@@ -47,6 +44,7 @@ class ChatMessageState extends State<ChatMessageScreen> {
   String messageText = '';
 
   void init() async {
+    // chatMessageService.deleteAll();
     websocketSubscription = websocket.bstream.listen(onWebsocketData);
     _searchController.addListener(onSearchChange);
     _messageController.addListener(onMessageChange);
@@ -73,7 +71,28 @@ class ChatMessageState extends State<ChatMessageScreen> {
     });
   }
 
-  Future<ChatMessageModel> receiveChatMessage(jsonData) async {}
+  Future<ChatMessageModel> receiveChatMessage(jsonData) async {
+    var chatMessage = await chatMessageService.receiveMessage(jsonData);
+    if (chatMessage == null) {
+      return null;
+    }
+
+    chatService.updateLastMessage(chat.id, chatMessage.toJson());
+
+    setState(() {
+      chatMessages = chatMessageService.chatMessages;
+    });
+
+    if (_scrollController != null && _scrollController.hasClients) {
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          curve: Curves.easeOut,
+          duration: const Duration(milliseconds: 300),
+        );
+      });
+    }
+  }
 
   Future<ChatMessageModel> receiveMessageStatus(jsonData) async {}
 
@@ -139,8 +158,16 @@ class ChatMessageState extends State<ChatMessageScreen> {
   }
 
   void onSendMessage() async {
-    ChatMessageModel _chatMessage = await chatMessageService
-        .sendText(messageText, chatId: chat.id, username: account.username);
+    if (chat.contacts.length == 0) {
+      throw new ArgumentError('chat.contacts is empty');
+    }
+
+    ChatMessageModel _chatMessage = await chatMessageService.sendText(
+      messageText,
+      chatId: chat.id,
+      fromUsername: account.username,
+      toUsername: chat.contacts[0]['username'],
+    );
     _messageController.clear();
     chatService.updateLastMessage(chat.id, _chatMessage.toJson());
 

@@ -83,4 +83,44 @@ class HashKeyService {
 
     return hashKey;
   }
+
+  Future<List<dynamic>> getByChatId(String chatId,
+      {bool inJson = false}) async {
+    List<HashKeyModel> _hashKeys = [];
+
+    if (chatId == null || chatId.isEmpty) {
+      return null;
+    }
+
+    List<Map<String, dynamic>> jsonHashKeys = await db.getByParams(
+      TABLE_NAME,
+      where: 'chatId = ?',
+      whereArgs: [chatId],
+      orderBy: 'dateSend DESC',
+    );
+
+    if (inJson == true) {
+      return jsonHashKeys;
+    }
+
+    for (var jsonHashKey in jsonHashKeys) {
+      HashKeyModel hashKey = HashKeyModel.fromJson(jsonHashKey);
+      _hashKeys.add(hashKey);
+    }
+
+    return _hashKeys;
+  }
+
+  Future<bool> deleteAll() async {
+    try {
+      hashKeys = [];
+      int result = await db.deleteAll(TABLE_NAME);
+      print('all hashKeys deleted: $result');
+    } catch (e) {
+      print('HashKeysService.deleteAll error: ${e.toString()}');
+      return null;
+    }
+
+    return true;
+  }
 }
