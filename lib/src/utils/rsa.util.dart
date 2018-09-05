@@ -9,6 +9,7 @@ import "package:tododo/src/utils/convert.util.dart";
 import "package:tododo/src/utils/lib/my_rsa_key_generator.dart";
 
 const KEY_SIZE = 32; // 32 byte key for AES-256
+const MESSAGE_VERSION = 0;
 
 class RsaHelper {
   static AsymmetricKeyPair<RSAPublicKey, RSAPrivateKey> generateKeyPair() {
@@ -190,21 +191,35 @@ class RsaHelper {
 
   static String encodeCipherToPem(
       Uint8List encryptedSessionKey, Uint8List cipherText) {
+    var version = ASN1Integer(BigInt.from(MESSAGE_VERSION));
+
     var seq = new ASN1Sequence();
     var sessionKeyAsn1Obj = new ASN1BitString(encryptedSessionKey);
     var cipherTextAsn1Obj = new ASN1BitString(cipherText);
     seq.add(sessionKeyAsn1Obj);
     seq.add(cipherTextAsn1Obj);
 
-    var dataBase64 = base64.encode(seq.encodedBytes);
+    var topLevelSeq = new ASN1Sequence();
+    topLevelSeq.add(version);
+    topLevelSeq.add(seq);
 
-    return """-----BEGIN MESSAGE-----\r\n$dataBase64\r\n-----END MESSAGE-----""";
+    var dataBase64 = base64.encode(topLevelSeq.encodedBytes);
+
+    return """-----BEGIN ENCRYPTED MESSAGE-----\r\n$dataBase64\r\n-----END ENCRYPTED MESSAGE-----""";
   }
 
   static List<Uint8List> decodeCipherFromPem(String cipherPemString) {
     List<int> cipherDER = decodePEM(cipherPemString);
     var asn1Parser = new ASN1Parser(cipherDER);
-    var seq = asn1Parser.nextObject() as ASN1Sequence;
+    var topLevelSeq = asn1Parser.nextObject() as ASN1Sequence;
+
+    var version = topLevelSeq.elements[0] as ASN1Integer;
+    if (version.intValue != MESSAGE_VERSION) {
+      throw new ArgumentError(
+          'message version (${version.intValue}) is invalid');
+    }
+
+    var seq = topLevelSeq.elements[1] as ASN1Sequence;
     var sessionKey = seq.elements[0] as ASN1BitString;
     var cipherText = seq.elements[1] as ASN1BitString;
 

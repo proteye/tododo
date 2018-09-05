@@ -41,14 +41,14 @@ List<int> decodePEM(String pem) {
   var startsWith = [
     "-----BEGIN PUBLIC KEY-----",
     "-----BEGIN PRIVATE KEY-----",
-    "-----BEGIN MESSAGE-----",
+    "-----BEGIN ENCRYPTED MESSAGE-----",
     "-----BEGIN PGP PUBLIC KEY BLOCK-----\r\nVersion: React-Native-OpenPGP.js 0.1\r\nComment: http://openpgpjs.org\r\n\r\n",
     "-----BEGIN PGP PRIVATE KEY BLOCK-----\r\nVersion: React-Native-OpenPGP.js 0.1\r\nComment: http://openpgpjs.org\r\n\r\n",
   ];
   var endsWith = [
     "-----END PUBLIC KEY-----",
     "-----END PRIVATE KEY-----",
-    "-----END MESSAGE-----",
+    "-----END ENCRYPTED MESSAGE-----",
     "-----END PGP PUBLIC KEY BLOCK-----",
     "-----END PGP PRIVATE KEY BLOCK-----",
   ];
