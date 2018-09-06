@@ -135,6 +135,19 @@ class ContactService {
     return true;
   }
 
+  Future<bool> deleteAll() async {
+    try {
+      contacts = [];
+      int result = await db.deleteAll(TABLE_NAME);
+      print('all contacts deleted: $result');
+    } catch (e) {
+      print('ChatService.deleteAll error: ${e.toString()}');
+      return null;
+    }
+
+    return true;
+  }
+
   List<ContactModel> find(String text) {
     return contacts
         .where((item) =>

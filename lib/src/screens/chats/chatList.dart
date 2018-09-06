@@ -39,6 +39,46 @@ class ChatListState extends State<ChatListScreen> {
     setState(() {});
   }
 
+  void deleteChat() async {
+    await chatService.deleteAll();
+    setState(() {
+      chats = chatService.chats;
+    });
+    Navigator.of(context).pop();
+  }
+
+  void showDeleteChatDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        // return object of type Dialog
+        return AlertDialog(
+          title: new Text('Confirmation'),
+          content: new Text(
+              'Are you sure to delete ALL chats, messages and hashKeys?'),
+          actions: <Widget>[
+            new FlatButton(
+              child: new Text(
+                'Delete',
+                style: TextStyle(color: Colors.red, fontSize: 16.0),
+              ),
+              onPressed: deleteChat,
+            ),
+            new FlatButton(
+              child: new Text(
+                'Cancel',
+                style: TextStyle(fontSize: 16.0),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void search(String text) async {
     if (text.isEmpty) {
       return;
@@ -77,12 +117,39 @@ class ChatListState extends State<ChatListScreen> {
     return chat;
   }
 
+  Future<void> receiveChatMessage(jsonData) async {
+    var chatMessage = await chatMessageService.receiveMessage(
+        jsonData, chatService.currentChat);
+    if (chatMessage == null) {
+      return null;
+    }
+
+    chatService.updateLastMessage(chatMessage.chatId, chatMessage.toJson());
+
+    setState(() {
+      chats = chatService.chats;
+    });
+  }
+
+  Future<void> receiveMessageStatus(jsonData) async {
+    await chatMessageService.receiveMessageStatus(jsonData);
+  }
+
   void onWebsocketData(data) {
     try {
       var jsonData = json.decode(data);
       switch (jsonData['action']) {
         case 'create_chat':
           receiveCreateChat(jsonData);
+          break;
+        case 'send_chat_message':
+          receiveChatMessage(jsonData);
+          break;
+        case 'chat_message_received':
+          receiveMessageStatus(jsonData);
+          break;
+        case 'chat_message_read':
+          receiveMessageStatus(jsonData);
           break;
       }
     } catch (e) {
@@ -123,6 +190,10 @@ class ChatListState extends State<ChatListScreen> {
     Navigator.pushNamed(context, '/chatMessage/${chat.id}');
   }
 
+  void onChatLongPress(chat) {
+    showDeleteChatDialog();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -142,6 +213,7 @@ class ChatListState extends State<ChatListScreen> {
     return Scaffold(
       resizeToAvoidBottomPadding: false,
       appBar: AppBar(
+        centerTitle: false,
         title: Text('Chats',
             style: TextStyle(color: Colors.black, fontWeight: FontWeight.w700)),
         titleSpacing: 0.0,
@@ -188,6 +260,9 @@ class ChatListState extends State<ChatListScreen> {
                         itemBuilder: (context, index) {
                           var chat = chats[index];
                           var subTitle = 'You have no messages yet';
+                          var unreadCount = chats[index].unreadCount > 0
+                              ? chats[index].unreadCount.toString()
+                              : '';
                           if (chat.lastMessage != null &&
                               chat.lastMessage.isNotEmpty) {
                             String nickname = accountService.account != null &&
@@ -204,6 +279,9 @@ class ChatListState extends State<ChatListScreen> {
                             onTap: () {
                               onChatTap(chat);
                             },
+                            onLongPress: () {
+                              onChatLongPress(chat);
+                            },
                             leading: Icon(
                               Icons.account_circle,
                               size: 48.0,
@@ -215,6 +293,11 @@ class ChatListState extends State<ChatListScreen> {
                                     fontSize: 16.0)),
                             subtitle: Text(subTitle,
                                 style: TextStyle(
+                                    fontWeight: FontWeight.w400,
+                                    fontSize: 14.0)),
+                            trailing: Text(unreadCount,
+                                style: TextStyle(
+                                    color: Colors.blue,
                                     fontWeight: FontWeight.w400,
                                     fontSize: 14.0)),
                           );

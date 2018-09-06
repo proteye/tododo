@@ -30,6 +30,45 @@ class ContactListState extends State<ContactListScreen> {
     });
   }
 
+  void deleteChat() {
+    contactService.deleteAll();
+    setState(() {
+      contacts = contactService.contacts;
+    });
+    Navigator.of(context).pop();
+  }
+
+  void showDeleteChatDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        // return object of type Dialog
+        return AlertDialog(
+          title: new Text('Confirmation'),
+          content: new Text('Are you sure to delete ALL contacts?'),
+          actions: <Widget>[
+            new FlatButton(
+              child: new Text(
+                'Delete',
+                style: TextStyle(color: Colors.red, fontSize: 16.0),
+              ),
+              onPressed: deleteChat,
+            ),
+            new FlatButton(
+              child: new Text(
+                'Cancel',
+                style: TextStyle(fontSize: 16.0),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void search(String text) async {
     if (text.isEmpty) {
       return;
@@ -72,6 +111,10 @@ class ContactListState extends State<ContactListScreen> {
 
   void onContactTap(contact) {}
 
+  void onContactLongPress(contact) {
+    showDeleteChatDialog();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -90,6 +133,7 @@ class ContactListState extends State<ContactListScreen> {
     return Scaffold(
       resizeToAvoidBottomPadding: false,
       appBar: AppBar(
+        centerTitle: false,
         title: Text('Contacts',
             style: TextStyle(color: Colors.black, fontWeight: FontWeight.w700)),
         titleSpacing: 0.0,
@@ -139,6 +183,9 @@ class ContactListState extends State<ContactListScreen> {
                           return ListTile(
                             onTap: () {
                               onContactTap(contact);
+                            },
+                            onLongPress: () {
+                              onContactLongPress(contact);
                             },
                             leading: Icon(
                               Icons.account_circle,

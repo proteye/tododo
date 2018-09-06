@@ -13,6 +13,7 @@ class GroupListState extends State<GroupListScreen> {
     return Scaffold(
       resizeToAvoidBottomPadding: true,
       appBar: AppBar(
+        centerTitle: false,
         title: Text('Groups',
             style: TextStyle(color: Colors.black, fontWeight: FontWeight.w700)),
         titleSpacing: 0.0,

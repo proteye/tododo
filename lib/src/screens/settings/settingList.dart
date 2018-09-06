@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_statusbarcolor/flutter_statusbarcolor.dart';
 
 import 'package:tododo/src/services/account.service.dart';
 import 'package:tododo/src/utils/websocket.util.dart';
@@ -16,6 +18,11 @@ class SettingListScreen extends StatefulWidget {
 
 class SettingListState extends State<SettingListScreen> {
   void init() async {
+    try {
+      await FlutterStatusbarcolor.setStatusBarColor(Colors.grey);
+    } on PlatformException catch (e) {
+      print(e);
+    }
     await accountService.init();
   }
 
@@ -43,6 +50,7 @@ class SettingListState extends State<SettingListScreen> {
     return Scaffold(
       resizeToAvoidBottomPadding: true,
       appBar: AppBar(
+        centerTitle: false,
         title: Text('Settings',
             style: TextStyle(color: Colors.black, fontWeight: FontWeight.w700)),
         titleSpacing: 0.0,
