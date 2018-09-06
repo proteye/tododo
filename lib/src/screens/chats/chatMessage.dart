@@ -57,7 +57,8 @@ class ChatMessageState extends State<ChatMessageScreen> {
 
     chat = await chatService.loadAndClearById(widget.chatId);
     chatMessages = await chatMessageService.loadByChatId(widget.chatId);
-    if (chat.contacts.length >= 0) {
+    print(chat.contacts);
+    if (chat.contacts != null && chat.contacts.isNotEmpty) {
       contact = ContactModel.fromJson(chat.contacts[0]);
     }
     chatMessageService.sendStatusRead(chat.id, contact.username);

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:tododo/src/models/chat.model.dart';
+import 'package:tododo/src/models/contact.model.dart';
 import 'package:tododo/src/models/hashKey.model.dart';
 import 'package:tododo/src/services/account.service.dart';
 import 'package:tododo/src/services/chat.service.dart';
@@ -97,6 +98,7 @@ class ChatListState extends State<ChatListScreen> {
       String payload = data['payload'];
       chat = await chatService.receiveChat(
           payload, accountService.account.privateKey);
+      getOpenKey(chat.owner);
       setState(() {
         chats = chatService.chats;
       });
@@ -135,6 +137,24 @@ class ChatListState extends State<ChatListScreen> {
     await chatMessageService.receiveMessageStatus(jsonData);
   }
 
+  void getOpenKey(String username) {
+    contactService.getOpenKey([username], encryptTime: new DateTime.now());
+  }
+
+  // add new contact if not exists
+  Future getOpenKeyResult(Map<String, dynamic> jsonData) async {
+    Map<String, dynamic> data = jsonData['data'][0];
+    String username = data['name'].toString();
+    String publicKey = data['open_key'].toString();
+    ContactModel contact = new ContactModel(
+        username: username,
+        nickname: Helper.getNickname(username),
+        publicKey: publicKey);
+    await contactService.create(contact);
+    await chatService
+        .updateContactsByOwner(contact.username, [contact.toJson()]);
+  }
+
   void onWebsocketData(data) {
     try {
       var jsonData = json.decode(data);
@@ -150,6 +170,9 @@ class ChatListState extends State<ChatListScreen> {
           break;
         case 'chat_message_read':
           receiveMessageStatus(jsonData);
+          break;
+        case 'get_open_key':
+          getOpenKeyResult(jsonData);
           break;
       }
     } catch (e) {

@@ -163,6 +163,19 @@ class ChatService {
     return chat;
   }
 
+  Future<void> updateContactsByOwner(
+      String owner, List<Map<String, dynamic>> contacts) async {
+    try {
+      var _contacts = json.encode(contacts);
+      int result = await db.update(TABLE_NAME, {'contacts': _contacts},
+          where: 'owner = ?', whereArgs: [owner]);
+      print('chat.contacts updated: $result');
+    } catch (e) {
+      print('ChatService.update error: ${e.toString()}');
+      return null;
+    }
+  }
+
   Future<bool> deleteById(String id) async {
     try {
       int index = chats.indexWhere((item) => item.id == id);
