@@ -117,6 +117,7 @@ class ChatCreateState extends State<ChatCreateScreen> {
         iconTheme: IconThemeData(
           color: Colors.black54,
         ),
+        centerTitle: false,
         title: Text('Create chat',
             style: TextStyle(color: Colors.black, fontWeight: FontWeight.w700)),
         titleSpacing: 0.0,

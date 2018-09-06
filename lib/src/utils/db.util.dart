@@ -65,6 +65,12 @@ class Db {
     return database.insert(tableName, object);
   }
 
+  Future<int> update(String tableName, Map<String, dynamic> values,
+      {String where, List whereArgs}) {
+    return database.update(tableName, values,
+        where: where, whereArgs: whereArgs);
+  }
+
   Future<int> updateById(
       String tableName, String columnId, Map<String, dynamic> object) {
     return database.update(tableName, object,

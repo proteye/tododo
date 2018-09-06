@@ -50,6 +50,7 @@ class ChatService {
     return chats;
   }
 
+  // load and set currentChat
   Future<ChatModel> loadById(String id) async {
     try {
       var jsonChat = await db.getById(TABLE_NAME, COLUMN_ID, id);
@@ -57,6 +58,26 @@ class ChatService {
         throw new ArgumentError('chat not found');
       }
       currentChat = ChatModel.fromSqlite(jsonChat);
+    } catch (e) {
+      print('ChatService.loadById error: ${e.toString()}');
+      return null;
+    }
+
+    return currentChat;
+  }
+
+  // set currentChat and clear unreadCount
+  Future<ChatModel> loadAndClearById(String id) async {
+    try {
+      currentChat = await loadById(id);
+      if (currentChat != null && currentChat.unreadCount > 0) {
+        currentChat.unreadCount = 0;
+        await db.updateById(TABLE_NAME, COLUMN_ID, currentChat.toSqlite());
+        int index = chats.indexWhere((item) => item.id == id);
+        if (index >= 0) {
+          chats[index].unreadCount = 0;
+        }
+      }
     } catch (e) {
       print('ChatService.loadById error: ${e.toString()}');
       return null;
@@ -128,6 +149,9 @@ class ChatService {
       }
 
       chats[index].lastMessage = lastMessage;
+      if (!(currentChat != null && currentChat.id == id)) {
+        chats[index].unreadCount += 1;
+      }
       chat = chats[index];
       int result = await db.updateById(TABLE_NAME, COLUMN_ID, chat.toSqlite());
       print('chat.lastMessage updated: $result');
@@ -162,7 +186,7 @@ class ChatService {
       chats = [];
       int result = await db.deleteAll(TABLE_NAME);
 
-      // TODO - remove
+      // TODO - remove after tests
       await chatMessageService.deleteAll();
       await hashKeyService.deleteAll();
 
@@ -173,6 +197,10 @@ class ChatService {
     }
 
     return true;
+  }
+
+  void clearCurrentChat() {
+    currentChat = null;
   }
 
   List<ChatModel> find(String text) {

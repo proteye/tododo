@@ -173,6 +173,7 @@ class ContactAddState extends State<ContactAddScreen> {
         iconTheme: IconThemeData(
           color: Colors.black54,
         ),
+        centerTitle: false,
         title: Text('Add contact',
             style: TextStyle(color: Colors.black, fontWeight: FontWeight.w700)),
         titleSpacing: 0.0,

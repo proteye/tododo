@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/scheduler.dart';
 
 import 'package:tododo/src/models/account.model.dart';
+import 'package:tododo/src/models/contact.model.dart';
 import 'package:tododo/src/models/chat.model.dart';
 import 'package:tododo/src/models/chatMessage.model.dart';
 import 'package:tododo/src/services/account.service.dart';
@@ -40,8 +41,12 @@ class ChatMessageState extends State<ChatMessageScreen> {
   StreamSubscription<dynamic> websocketSubscription;
   ChatModel chat;
   List<ChatMessageModel> chatMessages = [];
+  ContactModel contact = new ContactModel();
+
   String searchText = '';
   String messageText = '';
+  bool isTyping = false;
+  bool isTypingSend = true;
 
   void init() async {
     // chatMessageService.deleteAll();
@@ -50,14 +55,19 @@ class ChatMessageState extends State<ChatMessageScreen> {
     _messageController.addListener(onMessageChange);
     _messageFocusNode.addListener(onMessageTextFieldFocus);
 
-    chat = await chatService.loadById(widget.chatId);
+    chat = await chatService.loadAndClearById(widget.chatId);
     chatMessages = await chatMessageService.loadByChatId(widget.chatId);
+    if (chat.contacts.length >= 0) {
+      contact = ContactModel.fromJson(chat.contacts[0]);
+    }
+    chatMessageService.sendStatusRead(chat.id, contact.username);
 
     if (chatMessages.length > 0 && _scrollController != null) {
       SchedulerBinding.instance.addPostFrameCallback((_) {
         _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
       });
     }
+
     setState(() {});
   }
 
@@ -71,14 +81,7 @@ class ChatMessageState extends State<ChatMessageScreen> {
     });
   }
 
-  Future<ChatMessageModel> receiveChatMessage(jsonData) async {
-    var chatMessage = await chatMessageService.receiveMessage(jsonData);
-    if (chatMessage == null) {
-      return null;
-    }
-
-    chatService.updateLastMessage(chat.id, chatMessage.toJson());
-
+  Future<void> receiveChatMessage(jsonData) async {
     setState(() {
       chatMessages = chatMessageService.chatMessages;
     });
@@ -94,9 +97,29 @@ class ChatMessageState extends State<ChatMessageScreen> {
     }
   }
 
-  Future<ChatMessageModel> receiveMessageStatus(jsonData) async {}
+  Future<void> receiveMessageStatus(jsonData) async {
+    setState(() {
+      chatMessages = chatMessageService.chatMessages;
+    });
+  }
 
-  Future receiveMessageTyping(jsonData) async {}
+  Future<void> receiveMessageTyping(jsonData) async {
+    var meta = jsonData['data']['meta'];
+
+    if (meta['chatId'] != chat.id) {
+      return;
+    }
+
+    setState(() {
+      isTyping = true;
+    });
+
+    new Timer(Duration(milliseconds: 1500), () {
+      setState(() {
+        isTyping = false;
+      });
+    });
+  }
 
   void onWebsocketData(data) {
     try {
@@ -140,6 +163,16 @@ class ChatMessageState extends State<ChatMessageScreen> {
   }
 
   void onMessageChange() {
+    if (messageText != _messageController.text &&
+        isTypingSend == true &&
+        _messageFocusNode.hasFocus) {
+      isTypingSend = false;
+      chatMessageService.sendStatusTyping(chat.id, contact.username);
+      new Timer(Duration(seconds: 3), () {
+        isTypingSend = true;
+      });
+    }
+
     setState(() {
       messageText = _messageController.text;
     });
@@ -166,7 +199,7 @@ class ChatMessageState extends State<ChatMessageScreen> {
       messageText,
       chatId: chat.id,
       fromUsername: account.username,
-      toUsername: chat.contacts[0]['username'],
+      toUsername: contact.username,
     );
     _messageController.clear();
     chatService.updateLastMessage(chat.id, _chatMessage.toJson());
@@ -197,6 +230,7 @@ class ChatMessageState extends State<ChatMessageScreen> {
     _messageFocusNode.removeListener(onMessageTextFieldFocus);
     _messageFocusNode.dispose();
     websocketSubscription.cancel();
+    chatService.clearCurrentChat();
     super.dispose();
   }
 
@@ -208,8 +242,41 @@ class ChatMessageState extends State<ChatMessageScreen> {
         iconTheme: IconThemeData(
           color: Colors.black54,
         ),
-        title: Text('Chat Message',
-            style: TextStyle(color: Colors.black, fontWeight: FontWeight.w700)),
+        centerTitle: false,
+        title: Row(
+          children: <Widget>[
+            Icon(
+              Icons.account_circle,
+              size: 48.0,
+              color: Colors.blue,
+            ),
+            SizedBox(width: 10.0),
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  '@${contact.nickname}',
+                  style: TextStyle(
+                      color: Colors.black,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 18.0),
+                ),
+                Text(
+                  isTyping ? 'is typing...' : 'secure chat',
+                  style: TextStyle(
+                      color: Colors.grey,
+                      fontWeight: FontWeight.w400,
+                      fontSize: 12.0),
+                ),
+              ],
+            ),
+          ],
+        ),
+        // title: Text(
+        //   'Chat Message',
+        //   style: TextStyle(color: Colors.black, fontWeight: FontWeight.w700),
+        // ),
         titleSpacing: 0.0,
         backgroundColor: Colors.white,
       ),
