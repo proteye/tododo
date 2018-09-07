@@ -258,8 +258,10 @@ class ChatMessageService {
       String where = 'id IN (${whereCond.join(', ')})';
 
       chatMessages.forEach((item) {
-        item.status = status;
-        item.dateUpdate = dateNow;
+        if (ids.indexOf(item.id) >= 0) {
+          item.status = status;
+          item.dateUpdate = dateNow;
+        }
       });
 
       var result = await db.update(
