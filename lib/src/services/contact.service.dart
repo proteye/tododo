@@ -60,11 +60,11 @@ class ContactService {
 
   Future<ContactModel> create(ContactModel contact) async {
     try {
-      contacts.add(contact);
       var _contact = await loadByUsername(contact.username);
       if (_contact != null) {
         return null;
       }
+      contacts.add(contact);
       var result = await db.insert(TABLE_NAME, contact.toSqlite());
       print('contact created: $result');
     } catch (e) {

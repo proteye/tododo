@@ -166,6 +166,10 @@ class ChatService {
   Future<void> updateContactsByOwner(
       String owner, List<Map<String, dynamic>> contacts) async {
     try {
+      int index = chats.indexWhere((item) => item.owner == owner);
+      if (index >= 0) {
+        chats[index].contacts = contacts;
+      }
       var _contacts = json.encode(contacts);
       int result = await db.update(TABLE_NAME, {'contacts': _contacts},
           where: 'owner = ?', whereArgs: [owner]);

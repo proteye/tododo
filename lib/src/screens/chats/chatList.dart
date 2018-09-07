@@ -31,6 +31,7 @@ class ChatListState extends State<ChatListScreen> {
   StreamSubscription<dynamic> websocketSubscription;
   List<ChatModel> chats = [];
   String searchText = '';
+  DateTime encryptTime;
 
   void init() async {
     websocketSubscription = websocket.bstream.listen(onWebsocketData);
@@ -138,21 +139,26 @@ class ChatListState extends State<ChatListScreen> {
   }
 
   void getOpenKey(String username) {
-    contactService.getOpenKey([username], encryptTime: new DateTime.now());
+    encryptTime = new DateTime.now();
+    contactService.getOpenKey([username], encryptTime: encryptTime);
   }
 
   // add new contact if not exists
   Future getOpenKeyResult(Map<String, dynamic> jsonData) async {
-    Map<String, dynamic> data = jsonData['data'][0];
-    String username = data['name'].toString();
-    String publicKey = data['open_key'].toString();
-    ContactModel contact = new ContactModel(
-        username: username,
-        nickname: Helper.getNickname(username),
-        publicKey: publicKey);
-    await contactService.create(contact);
-    await chatService
-        .updateContactsByOwner(contact.username, [contact.toJson()]);
+    var encryptTimeResult = DateTime.parse(jsonData['encrypt_time']);
+    if (encryptTime.millisecondsSinceEpoch ==
+        encryptTimeResult.millisecondsSinceEpoch) {
+      Map<String, dynamic> data = jsonData['data'][0];
+      String username = data['name'].toString();
+      String publicKey = data['open_key'].toString();
+      ContactModel contact = new ContactModel(
+          username: username,
+          nickname: Helper.getNickname(username),
+          publicKey: publicKey);
+      await contactService.create(contact);
+      await chatService
+          .updateContactsByOwner(contact.username, [contact.toJson()]);
+    }
   }
 
   void onWebsocketData(data) {
